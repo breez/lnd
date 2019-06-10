@@ -271,6 +271,8 @@ type ChannelLinkConfig struct {
 	// GetAliases is used by the link and switch to fetch the set of
 	// aliases for a given link.
 	GetAliases func(base lnwire.ShortChannelID) []lnwire.ShortChannelID
+
+	OnCommitmentRevoked func()
 }
 
 // shutdownReq contains an error channel that will be used by the channelLink
@@ -1970,6 +1972,7 @@ func (l *channelLink) handleUpstreamMsg(msg lnwire.Message) {
 			return
 		}
 		l.cfg.Peer.SendMessage(false, nextRevocation)
+		l.cfg.OnCommitmentRevoked()
 
 		// Notify the incoming htlcs of which the resolutions were
 		// locked in.
@@ -2087,6 +2090,7 @@ func (l *channelLink) handleUpstreamMsg(msg lnwire.Message) {
 		if l.failed {
 			return
 		}
+		l.cfg.OnCommitmentRevoked()
 
 		// The revocation window opened up. If there are pending local
 		// updates, try to update the commit tx. Pending updates could
