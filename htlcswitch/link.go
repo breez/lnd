@@ -268,6 +268,8 @@ type ChannelLinkConfig struct {
 	// aliases for a given link.
 	GetAliases func(base lnwire.ShortChannelID) []lnwire.ShortChannelID
 
+	OnCommitmentRevoked func()
+
 	// PreviouslySentShutdown is an optional value that is set if, at the
 	// time of the link being started, persisted shutdown info was found for
 	// the channel. This value being set means that we previously sent a
@@ -2275,6 +2277,7 @@ func (l *channelLink) handleUpstreamMsg(msg lnwire.Message) {
 		l.RWMutex.Unlock()
 
 		l.cfg.Peer.SendMessage(false, nextRevocation)
+		l.cfg.OnCommitmentRevoked()
 
 		// Notify the incoming htlcs of which the resolutions were
 		// locked in.
@@ -2398,6 +2401,7 @@ func (l *channelLink) handleUpstreamMsg(msg lnwire.Message) {
 		if l.failed {
 			return
 		}
+		l.cfg.OnCommitmentRevoked()
 
 		// The revocation window opened up. If there are pending local
 		// updates, try to update the commit tx. Pending updates could

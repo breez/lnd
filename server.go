@@ -27,6 +27,7 @@ import (
 	sphinx "github.com/lightningnetwork/lightning-onion"
 	"github.com/lightningnetwork/lnd/aliasmgr"
 	"github.com/lightningnetwork/lnd/autopilot"
+	"github.com/lightningnetwork/lnd/backupnotifier"
 	"github.com/lightningnetwork/lnd/brontide"
 	"github.com/lightningnetwork/lnd/chainreg"
 	"github.com/lightningnetwork/lnd/chanacceptor"
@@ -336,6 +337,7 @@ type server struct {
 	livenessMonitor *healthcheck.Monitor
 
 	customMessageServer *subscribe.Server
+	backupNotifier      *backupnotifier.BackupNotifier
 
 	// txPublisher is a publisher with fee-bumping capability.
 	txPublisher *sweep.TxPublisher
@@ -615,7 +617,8 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 
 		// TODO(roasbeef): derive proper onion key based on rotation
 		// schedule
-		sphinx: hop.NewOnionProcessor(sphinxRouter),
+		sphinx:         hop.NewOnionProcessor(sphinxRouter),
+		backupNotifier: backupnotifier.NewBackupNotifier(),
 
 		torController: torController,
 
@@ -2102,6 +2105,18 @@ func (s *server) Start() error {
 			return
 		}
 
+		if err := s.backupNotifier.Start(); err != nil {
+			startErr = err
+			return
+		}
+		cleanup = cleanup.add(s.backupNotifier.Stop)
+
+		if err := s.sphinx.Start(); err != nil {
+			startErr = err
+			return
+		}
+		cleanup = cleanup.add(s.sphinx.Stop)
+
 		if s.towerClientMgr != nil {
 			cleanup = cleanup.add(s.towerClientMgr.Stop)
 			if err := s.towerClientMgr.Start(); err != nil {
@@ -2450,6 +2465,9 @@ func (s *server) Stop() error {
 		}
 		if err := s.chanRouter.Stop(); err != nil {
 			srvrLog.Warnf("failed to stop chanRouter: %v", err)
+		}
+		if err := s.backupNotifier.Stop(); err != nil {
+			srvrLog.Warnf("failed to stop backupNotifier: %v", err)
 		}
 		if err := s.chainArb.Stop(); err != nil {
 			srvrLog.Warnf("failed to stop chainArb: %v", err)
@@ -4108,6 +4126,7 @@ func (s *server) peerConnected(conn net.Conn, connReq *connmgr.ConnReq,
 		ChannelNotifier:         s.channelNotifier,
 		HtlcNotifier:            s.htlcNotifier,
 		TowerClient:             towerClient,
+		BackupNotifier:          s.backupNotifier,
 		DisconnectPeer:          s.DisconnectPeer,
 		GenNodeAnnouncement: func(...netann.NodeAnnModifier) (
 			lnwire.NodeAnnouncement, error) {

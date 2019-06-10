@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btclog"
 	"github.com/lightningnetwork/lnd/aliasmgr"
 	"github.com/lightningnetwork/lnd/autopilot"
+	"github.com/lightningnetwork/lnd/backupnotifier"
 	"github.com/lightningnetwork/lnd/chainreg"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/fn"
@@ -16,6 +17,7 @@ import (
 	"github.com/lightningnetwork/lnd/invoices"
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnrpc/autopilotrpc"
+	"github.com/lightningnetwork/lnd/lnrpc/backuprpc"
 	"github.com/lightningnetwork/lnd/lnrpc/chainrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/devrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
@@ -93,7 +95,8 @@ type subRPCServerConfigs struct {
 	// DevRPC is a sub-RPC server that exposes functionality that allows
 	// developers manipulate LND state that is normally not possible.
 	// Should only be used for development purposes.
-	DevRPC *devrpc.Config `group:"devrpc" namespace:"devrpc"`
+	DevRPC    *devrpc.Config    `group:"devrpc" namespace:"devrpc"`
+	BackupRPC *backuprpc.Config `group:"backuprpc" namespace:"backuprpc"`
 }
 
 // PopulateDependencies attempts to iterate through all the sub-server configs
@@ -126,7 +129,8 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	parseAddr func(addr string) (net.Addr, error),
 	rpcLogger btclog.Logger, aliasMgr *aliasmgr.Manager,
 	auxDataParser fn.Option[AuxDataParser],
-	invoiceHtlcModifier *invoices.HtlcModificationInterceptor) error {
+	invoiceHtlcModifier *invoices.HtlcModificationInterceptor,
+	backupNotifier *backupnotifier.BackupNotifier) error {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.
@@ -302,6 +306,18 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 
 			subCfgValue.FieldByName("AliasMgr").Set(
 				reflect.ValueOf(aliasMgr),
+			)
+		case *backuprpc.Config:
+			subCfgValue := extractReflectValue(subCfg)
+
+			subCfgValue.FieldByName("NetworkDir").Set(
+				reflect.ValueOf(networkDir),
+			)
+			subCfgValue.FieldByName("MacService").Set(
+				reflect.ValueOf(macService),
+			)
+			subCfgValue.FieldByName("BackupNotifier").Set(
+				reflect.ValueOf(backupNotifier),
 			)
 
 		case *watchtowerrpc.Config:

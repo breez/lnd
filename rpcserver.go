@@ -789,7 +789,7 @@ func (r *rpcServer) addDeps(s *server, macService *macaroons.Service,
 		genInvoiceFeatures, genAmpInvoiceFeatures,
 		s.getNodeAnnouncement, s.updateAndBrodcastSelfNode, parseAddr,
 		rpcsLog, s.aliasMgr, r.implCfg.AuxDataParser,
-		invoiceHtlcModifier,
+		invoiceHtlcModifier, s.backupNotifier,
 	)
 	if err != nil {
 		return err
