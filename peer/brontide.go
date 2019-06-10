@@ -19,6 +19,8 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btclog"
 	"github.com/davecgh/go-spew/spew"
+
+	"github.com/lightningnetwork/lnd/backupnotifier"
 	"github.com/lightningnetwork/lnd/buffer"
 	"github.com/lightningnetwork/lnd/build"
 	"github.com/lightningnetwork/lnd/chainntnfs"
@@ -284,6 +286,8 @@ type Config struct {
 
 	// TowerClient is used to backup revoked states.
 	TowerClient wtclient.ClientManager
+
+	BackupNotifier *backupnotifier.BackupNotifier
 
 	// DisconnectPeer is used to disconnect this peer if the cooperative close
 	// process fails.
@@ -1179,11 +1183,15 @@ func (p *Brontide) addLink(chanPoint *wire.OutPoint,
 		NotifyContractUpdate:   notifyContractUpdate,
 		OnChannelFailure:       onChannelFailure,
 		SyncStates:             syncStates,
-		BatchTicker:            ticker.New(p.cfg.ChannelCommitInterval),
-		FwdPkgGCTicker:         ticker.New(time.Hour),
+
+		BatchTicker:    ticker.New(p.cfg.ChannelCommitInterval),
+		FwdPkgGCTicker: ticker.New(time.Hour),
 		PendingCommitTicker: ticker.New(
 			p.cfg.PendingCommitInterval,
 		),
+		OnCommitmentRevoked: func() {
+			p.cfg.BackupNotifier.NotifyBackupEvent()
+		},
 		BatchSize:               p.cfg.ChannelCommitBatchSize,
 		UnsafeReplay:            p.cfg.UnsafeReplay,
 		MinUpdateTimeout:        htlcswitch.DefaultMinLinkFeeUpdateTimeout,
