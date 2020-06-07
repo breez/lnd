@@ -1,7 +1,10 @@
 package breezbackup
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -9,6 +12,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/coreos/bbolt"
 	"github.com/lightningnetwork/lnd/channeldb"
@@ -34,9 +38,18 @@ var (
 	nodeBucket         = []byte("graph-node")
 )
 
+var (
+	byteOrder = binary.BigEndian
+)
+
 type backupResult struct {
 	path string
 	err  error
+}
+
+type channelInfo struct {
+	outPoint  wire.OutPoint
+	channelID uint64
 }
 
 func Backup(chainParams *chaincfg.Params, channelDB *channeldb.DB, walletDB walletdb.DB) ([]string, error) {
@@ -182,10 +195,31 @@ func backupChanneldb(channelDB *channeldb.DB, destfile string) error {
 		return err
 	}
 
-	return copyChanIndex(dst, channelDB.DB)
+	ourNode, err := channelDB.ChannelGraph().SourceNode()
+	if err != nil {
+		return fmt.Errorf("channelDB.ChannelGraph().SourceNode(): %w", err)
+	}
+	var ourChannels []*channelInfo
+	err = channelDB.DB.View(func(tx *bbolt.Tx) error {
+		return ourNode.ForEachChannel(tx, func(tx *bbolt.Tx,
+			channelEdgeInfo *channeldb.ChannelEdgeInfo,
+			_ *channeldb.ChannelEdgePolicy,
+			_ *channeldb.ChannelEdgePolicy) error {
+			ourChannels = append(ourChannels, &channelInfo{
+				outPoint:  channelEdgeInfo.ChannelPoint,
+				channelID: channelEdgeInfo.ChannelID,
+			})
+			return nil
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("ourNode.ForEachChannel: %w", err)
+	}
+
+	return copyChanIndex(dst, channelDB.DB, ourChannels)
 }
 
-func copyChanIndex(dst, src *bbolt.DB) error {
+func copyChanIndex(dst, src *bbolt.DB, ourChannels []*channelInfo) error {
 	tx, err := dst.Begin(true)
 	if err != nil {
 		return err
@@ -207,7 +241,7 @@ func copyChanIndex(dst, src *bbolt.DB) error {
 	if err != nil {
 		return err
 	}
-	err = copyChanEdgeIndexToBucket(edges, chanIndex, edgeIndex, nodes, src)
+	err = copyChanEdgeIndexToBucket(edges, chanIndex, edgeIndex, nodes, src, ourChannels)
 	if err != nil {
 		return err
 	}
@@ -215,7 +249,20 @@ func copyChanIndex(dst, src *bbolt.DB) error {
 	return tx.Commit()
 }
 
-func copyChanEdgeIndexToBucket(e, ci, ei, n *bbolt.Bucket, db *bbolt.DB) error {
+// writeOutpoint writes an outpoint to the passed writer using the minimal
+// amount of bytes possible.
+func writeOutpoint(w io.Writer, o *wire.OutPoint) error {
+	if _, err := w.Write(o.Hash[:]); err != nil {
+		return err
+	}
+	if err := binary.Write(w, byteOrder, o.Index); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func copyChanEdgeIndexToBucket(e, ci, ei, n *bbolt.Bucket, db *bbolt.DB, ourChannels []*channelInfo) error {
 	return db.View(func(tx *bbolt.Tx) error {
 		edges := tx.Bucket(edgeBucket)
 		if edges == nil {
@@ -226,42 +273,62 @@ func copyChanEdgeIndexToBucket(e, ci, ei, n *bbolt.Bucket, db *bbolt.DB) error {
 			return nil
 		}
 		edgeIndex := edges.Bucket(edgeIndexBucket)
-		/*if edgeIndex == nil {
+		if edgeIndex == nil {
 			return nil
-		}*/
+		}
 		nodes := tx.Bucket(nodeBucket)
-		/*if nodes == nil {
+		if nodes == nil {
 			return nil
-		}*/
-		return chanIndex.ForEach(func(k, chanID []byte) error {
-			if chanID != nil {
-				err := ci.Put(k, chanID)
+		}
+		var err error
+		for _, channelInfo := range ourChannels {
+			var b bytes.Buffer
+			if err := writeOutpoint(&b, &channelInfo.outPoint); err != nil {
+				return err
+			}
+			k := b.Bytes()
+			var chanKey [8]byte
+			chanID := chanKey[:]
+			binary.BigEndian.PutUint64(chanID, channelInfo.channelID)
+			err = ci.Put(k, chanID)
+			if err != nil {
+				return err
+			}
+			edgeInfo := edgeIndex.Get(chanID)
+			if edgeInfo != nil {
+				err = ei.Put(chanID, edgeInfo)
 				if err != nil {
 					return err
 				}
-				edgeInfo := edgeIndex.Get(chanID)
-				if edgeInfo != nil {
-					err = ei.Put(chanID, edgeInfo)
-					if err != nil {
-						return err
-					}
-					node1Pub := edgeInfo[:33]
-					var edge1Key [33 + 8]byte
-					copy(edge1Key[:], node1Pub)
-					copy(edge1Key[33:], chanID[:])
-					e.Put(edge1Key[:], edges.Get(edge1Key[:]))
-					n.Put(node1Pub, nodes.Get(node1Pub))
 
-					node2Pub := edgeInfo[33:66]
-					var edge2Key [33 + 8]byte
-					copy(edge2Key[:], node2Pub)
-					copy(edge2Key[33:], chanID[:])
-					e.Put(edge2Key[:], edges.Get(edge2Key[:]))
-					n.Put(node2Pub, nodes.Get(node2Pub))
+				node1Pub := edgeInfo[:33]
+				var edge1Key [33 + 8]byte
+				copy(edge1Key[:], node1Pub)
+				copy(edge1Key[33:], chanID[:])
+				err = e.Put(edge1Key[:], edges.Get(edge1Key[:]))
+				if err != nil {
+					return err
+				}
+				err = n.Put(node1Pub, nodes.Get(node1Pub))
+				if err != nil {
+					return err
+				}
+
+				node2Pub := edgeInfo[33:66]
+				var edge2Key [33 + 8]byte
+				copy(edge2Key[:], node2Pub)
+				copy(edge2Key[33:], chanID[:])
+				err = e.Put(edge2Key[:], edges.Get(edge2Key[:]))
+				if err != nil {
+					return err
+				}
+				err = n.Put(node2Pub, nodes.Get(node2Pub))
+				if err != nil {
+					return err
 				}
 			}
-			return nil
-		})
+		}
+		return nil
 	})
 }
 
