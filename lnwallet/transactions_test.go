@@ -917,6 +917,7 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 	shortChanID := lnwire.NewShortChanIDFromInt(
 		binary.BigEndian.Uint64(chanIDBytes[:]),
 	)
+	chanID := lnwire.NewChanIDFromOutPoint(prevOut)
 
 	remoteChannelState := &channeldb.OpenChannel{
 		LocalChanCfg:            remoteCfg,
@@ -933,7 +934,7 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 		LocalCommitment:         remoteCommit,
 		RemoteCommitment:        remoteCommit,
 		Db:                      dbRemote,
-		Packager:                channeldb.NewChannelPackager(shortChanID),
+		Packager:                channeldb.NewChannelPackager(chanID),
 		FundingTxn:              tc.fundingTx.MsgTx(),
 	}
 	localChannelState := &channeldb.OpenChannel{
@@ -951,7 +952,7 @@ func createTestChannelsForVectors(tc *testContext, chanType channeldb.ChannelTyp
 		LocalCommitment:         localCommit,
 		RemoteCommitment:        localCommit,
 		Db:                      dbLocal,
-		Packager:                channeldb.NewChannelPackager(shortChanID),
+		Packager:                channeldb.NewChannelPackager(chanID),
 		FundingTxn:              tc.fundingTx.MsgTx(),
 	}
 
