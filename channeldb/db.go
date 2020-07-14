@@ -163,6 +163,10 @@ var (
 			number:    17,
 			migration: mig.CreateTLB(closeSummaryBucket),
 		},
+		{
+			number:    18,
+			migration: mig.MigrateFwdPackageKeys,
+		},
 	}
 
 	// Big endian is the preferred byte order, due to cursor scans over
