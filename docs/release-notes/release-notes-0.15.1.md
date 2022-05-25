@@ -206,3 +206,4 @@ Please upgrade to `lnd v0.15.3-beta` or later directly!
 * Priyansh Rastogi
 * Tommy Volk
 * Yong Yu
+* Ziggie
