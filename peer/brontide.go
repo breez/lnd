@@ -2597,6 +2597,10 @@ func (p *Brontide) reenableActiveChannels() {
 
 			// Add the channel to the retry map.
 			retryChans[chanPoint] = struct{}{}
+
+		default:
+			p.log.Errorf("Unable to enable channel %v: %v",
+				chanPoint, err)
 		}
 	}
 
