@@ -489,7 +489,6 @@ func (r *InterceptorChain) RemoveMiddleware(middlewareName string) {
 		return
 	}
 	delete(r.registeredMiddlewareNames, middlewareName)
-
 	r.registeredMiddleware = append(
 		r.registeredMiddleware[:index],
 		r.registeredMiddleware[index+1:]...,
