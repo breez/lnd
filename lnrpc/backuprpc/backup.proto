@@ -2,10 +2,15 @@ syntax = "proto3";
 
 package backuprpc;
 
-message BackupEventSubscription {}
+option go_package = "github.com/lightningnetwork/lnd/lnrpc/backuprpc";
 
-message BackupEventUpdate {}
+message BackupEventSubscription {
+}
+
+message BackupEventUpdate {
+}
 
 service Backup {
-    rpc SubscribeBackupEvents (BackupEventSubscription) returns (stream BackupEventUpdate);    
+    rpc SubscribeBackupEvents (BackupEventSubscription)
+        returns (stream BackupEventUpdate);
 }

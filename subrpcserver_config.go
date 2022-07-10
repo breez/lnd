@@ -16,6 +16,7 @@ import (
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnrpc/autopilotrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/backuprpc"
+	"github.com/lightningnetwork/lnd/lnrpc/breezbackuprpc"
 	"github.com/lightningnetwork/lnd/lnrpc/chainrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/devrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
@@ -26,7 +27,9 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/watchtowerrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/wtclientrpc"
+	"github.com/lightningnetwork/lnd/lnwallet/btcwallet"
 	"github.com/lightningnetwork/lnd/lnwire"
+
 	"github.com/lightningnetwork/lnd/macaroons"
 	"github.com/lightningnetwork/lnd/netann"
 	"github.com/lightningnetwork/lnd/routing"
@@ -92,8 +95,9 @@ type subRPCServerConfigs struct {
 	// DevRPC is a sub-RPC server that exposes functionality that allows
 	// developers manipulate LND state that is normally not possible.
 	// Should only be used for development purposes.
-	DevRPC    *devrpc.Config    `group:"devrpc" namespace:"devrpc"`
-	BackupRPC *backuprpc.Config `group:"backuprpc" namespace:"backuprpc"`
+	DevRPC         *devrpc.Config         `group:"devrpc" namespace:"devrpc"`
+	BackupRPC      *backuprpc.Config      `group:"backuprpc" namespace:"backuprpc"`
+	BreezBackupRPC *breezbackuprpc.Config `group:"breezbackuprpc" namespace:"breezbackuprpc"`
 }
 
 // PopulateDependencies attempts to iterate through all the sub-server configs
@@ -361,6 +365,26 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 
 			subCfgValue.FieldByName("UpdateNodeAnnouncement").Set(
 				reflect.ValueOf(updateNodeAnnouncement),
+			)
+
+		case *breezbackuprpc.Config:
+			subCfgValue := extractReflectValue(subCfg)
+
+			subCfgValue.FieldByName("NetworkDir").Set(
+				reflect.ValueOf(networkDir),
+			)
+			subCfgValue.FieldByName("ActiveNetParams").Set(
+				reflect.ValueOf(activeNetParams),
+			)
+			subCfgValue.FieldByName("MacService").Set(
+				reflect.ValueOf(macService),
+			)
+
+			subCfgValue.FieldByName("ChannelDB").Set(
+				reflect.ValueOf(cc.Wallet.Cfg.Database.GetParentDB()),
+			)
+			subCfgValue.FieldByName("WalletDB").Set(
+				reflect.ValueOf(cc.Wallet.WalletController.(*btcwallet.BtcWallet).InternalWallet().Database()),
 			)
 
 		default:
