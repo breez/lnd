@@ -35,6 +35,14 @@ func request_Backup_SubscribeBackupEvents_0(ctx context.Context, marshaler runti
 	var protoReq BackupEventSubscription
 	var metadata runtime.ServerMetadata
 
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
 	stream, err := client.SubscribeBackupEvents(ctx, &protoReq)
 	if err != nil {
 		return nil, metadata, err
@@ -54,7 +62,7 @@ func request_Backup_SubscribeBackupEvents_0(ctx context.Context, marshaler runti
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterBackupHandlerFromEndpoint instead.
 func RegisterBackupHandlerServer(ctx context.Context, mux *runtime.ServeMux, server BackupServer) error {
 
-	mux.Handle("GET", pattern_Backup_SubscribeBackupEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_Backup_SubscribeBackupEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
 		_, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -102,11 +110,11 @@ func RegisterBackupHandler(ctx context.Context, mux *runtime.ServeMux, conn *grp
 // "BackupClient" to call the correct interceptors.
 func RegisterBackupHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BackupClient) error {
 
-	mux.Handle("GET", pattern_Backup_SubscribeBackupEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_Backup_SubscribeBackupEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/backuprpc.Backup/SubscribeBackupEvents", runtime.WithHTTPPathPattern("/v2/backup/subscribe"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/backuprpc.Backup/SubscribeBackupEvents", runtime.WithHTTPPathPattern("/v2/backup/subscribebackupevents"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -126,7 +134,7 @@ func RegisterBackupHandlerClient(ctx context.Context, mux *runtime.ServeMux, cli
 }
 
 var (
-	pattern_Backup_SubscribeBackupEvents_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v2", "backup", "subscribe"}, ""))
+	pattern_Backup_SubscribeBackupEvents_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v2", "backup", "subscribebackupevents"}, ""))
 )
 
 var (

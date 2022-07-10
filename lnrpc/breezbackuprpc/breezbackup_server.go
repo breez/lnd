@@ -1,7 +1,7 @@
-//go:build backuprpc
-// +build backuprpc
+//go:build breezbackuprpc
+// +build breezbackuprpc
 
-package backuprpc
+package breezbackuprpc
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/lightningnetwork/lnd/breezbackup"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/macaroons"
 	"google.golang.org/grpc"
@@ -22,7 +23,7 @@ const (
 	// to register ourselves, and we also require that the main
 	// SubServerConfigDispatcher instance recognize this as the name of the
 	// config file that we need.
-	subServerName = "BackupRPC"
+	subServerName = "BreezBackupRPC"
 )
 
 var (
@@ -30,23 +31,23 @@ var (
 	// it doesn't already exist) will have.
 	macaroonOps = []bakery.Op{
 		{
-			Entity: "onchain",
+			Entity: "info",
 			Action: "read",
 		},
 	}
 
 	// macPermissions maps RPC calls to the permissions they require.
 	macPermissions = map[string][]bakery.Op{
-		"/backuprpc.Backup/SubscribeBackupEvents": {{
-			Entity: "onchain",
+		"/breezbackuprpc.BreezBackuper/GetBackup": {{
+			Entity: "info",
 			Action: "read",
 		}},
 	}
 
-	// DefaultBackupMacFilename is the default name of the backup
-	// macaroon that we expect to find via a file handle within the
+	// DefaultBreezBackuperMacFilename is the default name of the breez
+	// backuper macaroon that we expect to find via a file handle within the
 	// main configuration file in this package.
-	DefaultBackupMacFilename = "backupevents.macaroon"
+	DefaultBreezBackuperMacFilename = "breezbackup.macaroon"
 )
 
 // fileExists reports whether the named file or directory exists.
@@ -60,61 +61,59 @@ func fileExists(name string) bool {
 }
 
 type ServerShell struct {
-	BackupServer
+	BreezBackuperServer
 }
 
-// Server is a sub-server of the main RPC server: the backup RPC. This
-// RPC sub-server allows external callers to access the supscribe for
-// domains.
+// Server is a sub-server of the main RPC server.
 type Server struct {
 	started uint32
 	stopped uint32
 
-	cfg Config
 	// Required by the grpc-gateway/v2 library for forward compatibility.
 	// Must be after the atomically used variables to not break struct
 	// alignment.
-	UnimplementedBackupServer
+	UnimplementedBreezBackuperServer
 
-	quit chan struct{}
+	cfg Config
 }
 
-// New returns a new instance of the backuprpc Backup sub-server. We also
-// return the set of permissions for the macaroons that we may create within
-// this method. If the macaroons we need aren't found in the filepath, then
-// we'll create them on start up. If we're unable to locate, or create the
-// macaroons we need, then we'll return with an error.
+// New returns a new instance of the breezbackuprpc BreezBackuper
+// sub-server. We also return the set of permissions for the macaroons
+// that we may create within this method. If the macaroons we need aren't
+// found in the filepath, then we'll create them on start up.
+// If we're unable to locate, or create the macaroons we need, then we'll
+// return with an error.
 func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
-	// If the path of the backup macaroon wasn't generated, then
+	// If the path of the breez backuper macaroon wasn't generated, then
 	// we'll assume that it's found at the default network directory.
-	if cfg.BackupMacPath == "" {
-		cfg.BackupMacPath = filepath.Join(
-			cfg.NetworkDir, DefaultBackupMacFilename,
+	if cfg.BreezBackuperMacPath == "" {
+		cfg.BreezBackuperMacPath = filepath.Join(
+			cfg.NetworkDir, DefaultBreezBackuperMacFilename,
 		)
 	}
 
-	// Now that we know the full path of the backup macaroon, we can
+	// Now that we know the full path of the breez backuper macaroon, we can
 	// check to see if we need to create it or not.
-	macFilePath := cfg.BackupMacPath
+	macFilePath := cfg.BreezBackuperMacPath
 	if cfg.MacService != nil && !fileExists(macFilePath) {
-		log.Infof("Baking macaroons for backup RPC Server at: %v",
+		log.Infof("Baking macaroons for BreezBackuper RPC Server at: %v",
 			macFilePath)
 
-		// At this point, we know that the backkup macaroon
+		// At this point, we know that the breez backuperswapper macaroon
 		// doesn't yet, exist, so we need to create it with the help of
 		// the main macaroon service.
-		backupMac, err := cfg.MacService.NewMacaroon(
+		breezBackupMac, err := cfg.MacService.NewMacaroon(
 			context.Background(), macaroons.DefaultRootKeyID,
 			macaroonOps...,
 		)
 		if err != nil {
 			return nil, nil, err
 		}
-		backupMacBytes, err := backupMac.M().MarshalBinary()
+		breezBackupMacBytes, err := breezBackupMac.M().MarshalBinary()
 		if err != nil {
 			return nil, nil, err
 		}
-		err = ioutil.WriteFile(macFilePath, backupMacBytes, 0644)
+		err = ioutil.WriteFile(macFilePath, breezBackupMacBytes, 0644)
 		if err != nil {
 			os.Remove(macFilePath)
 			return nil, nil, err
@@ -122,8 +121,7 @@ func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
 	}
 
 	return &Server{
-		cfg:  *cfg,
-		quit: make(chan struct{}),
+		cfg: *cfg,
 	}, macPermissions, nil
 }
 
@@ -136,9 +134,9 @@ func New(cfg *Config) (*Server, lnrpc.MacaroonPerms, error) {
 func (r *ServerShell) RegisterWithRootServer(grpcServer *grpc.Server) error {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
-	RegisterBackupServer(grpcServer, r)
+	RegisterBreezBackuperServer(grpcServer, r)
 
-	log.Debugf("Backup server successfully register with root gRPC " +
+	log.Debugf("BackupRPC server successfully register with root gRPC " +
 		"server")
 
 	return nil
@@ -169,13 +167,13 @@ func (r *ServerShell) CreateSubServer(configRegistry lnrpc.SubServerConfigDispat
 	if err != nil {
 		return nil, nil, err
 	}
-	r.BackupServer = backServer
+	r.BreezBackuperServer = backServer
 	return backServer, macPermissions, nil
 }
 
 // Compile-time checks to ensure that Server fully implements the
-// BackupServer gRPC service and lnrpc.SubServer interface.
-var _ BackupServer = (*Server)(nil)
+// BreezBackuperServer gRPC service and lnrpc.SubServer interface.
+var _ BreezBackuperServer = (*Server)(nil)
 var _ lnrpc.SubServer = (*Server)(nil)
 
 // Start launches any helper goroutines required for the server to function.
@@ -196,9 +194,6 @@ func (s *Server) Stop() error {
 	if !atomic.CompareAndSwapUint32(&s.stopped, 0, 1) {
 		return nil
 	}
-
-	close(s.quit)
-
 	return nil
 }
 
@@ -218,9 +213,11 @@ func (s *Server) Name() string {
 func (s *Server) RegisterWithRootServer(grpcServer *grpc.Server) error {
 	// We make sure that we register it with the main gRPC server to ensure
 	// all our methods are routed properly.
-	RegisterBackupServer(grpcServer, s)
-	log.Infof("Backup RPC server successfully register with root " +
+	RegisterBreezBackuperServer(grpcServer, s)
+
+	log.Debug("BreezBackuper RPC server successfully register with root " +
 		"gRPC server")
+
 	return nil
 }
 
@@ -230,29 +227,9 @@ func (s *Server) RegisterWithRestServer(ctx context.Context,
 	return nil
 }
 
-// SubscribeBackupEvents returns a uni-directional stream (server -> client)
-// for notifying the client of points in time where backup is needed.
-func (r *Server) SubscribeBackupEvents(req *BackupEventSubscription,
-	updateStream Backup_SubscribeBackupEventsServer) error {
-
-	backupEventSub, err := r.cfg.BackupNotifier.SubscribeBackupEvents()
-	if err != nil {
-		return err
-	}
-
-	// Ensure that the resources for the client is cleaned up once either
-	// the server, or client exits.
-	defer backupEventSub.Cancel()
-
-	for {
-		select {
-		// A new backup event was sent
-		case _ = <-backupEventSub.Updates():
-			if err := updateStream.Send(&BackupEventUpdate{}); err != nil {
-				return err
-			}
-		case <-r.quit:
-			return nil
-		}
-	}
+// SubSwapClientInit
+func (s *Server) GetBackup(ctx context.Context,
+	in *GetBackupRequest) (*GetBackupResponse, error) {
+	files, err := breezbackup.Backup(s.cfg.ActiveNetParams, s.cfg.ChannelDB, s.cfg.WalletDB)
+	return &GetBackupResponse{Files: files}, err
 }
