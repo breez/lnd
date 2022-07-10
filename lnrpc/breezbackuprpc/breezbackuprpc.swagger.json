@@ -1,12 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "backuprpc/backup.proto",
+    "title": "breezbackuprpc/breezbackuprpc.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "Backup"
+      "name": "BreezBackuper"
     }
   ],
   "consumes": [
@@ -16,23 +16,14 @@
     "application/json"
   ],
   "paths": {
-    "/v2/backup/subscribebackupevents": {
+    "/v2/breezbackuper/getbackup": {
       "post": {
-        "operationId": "Backup_SubscribeBackupEvents",
+        "operationId": "BreezBackuper_GetBackup",
         "responses": {
           "200": {
-            "description": "A successful response.(streaming responses)",
+            "description": "A successful response.",
             "schema": {
-              "type": "object",
-              "properties": {
-                "result": {
-                  "$ref": "#/definitions/backuprpcBackupEventUpdate"
-                },
-                "error": {
-                  "$ref": "#/definitions/rpcStatus"
-                }
-              },
-              "title": "Stream result of backuprpcBackupEventUpdate"
+              "$ref": "#/definitions/breezbackuprpcGetBackupResponse"
             }
           },
           "default": {
@@ -48,22 +39,30 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/backuprpcBackupEventSubscription"
+              "$ref": "#/definitions/breezbackuprpcGetBackupRequest"
             }
           }
         ],
         "tags": [
-          "Backup"
+          "BreezBackuper"
         ]
       }
     }
   },
   "definitions": {
-    "backuprpcBackupEventSubscription": {
+    "breezbackuprpcGetBackupRequest": {
       "type": "object"
     },
-    "backuprpcBackupEventUpdate": {
-      "type": "object"
+    "breezbackuprpcGetBackupResponse": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     },
     "protobufAny": {
       "type": "object",
