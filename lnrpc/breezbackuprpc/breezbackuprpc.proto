@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package breezbackuprpc;
+
+option go_package = "github.com/lightningnetwork/lnd/lnrpc/breezbackuprpc";
+
+message GetBackupRequest {
+}
+
+message GetBackupResponse {
+    repeated string files = 1 [ json_name = "files" ];
+}
+
+service BreezBackuper {
+    rpc GetBackup (GetBackupRequest) returns (GetBackupResponse) {
+    }
+}
