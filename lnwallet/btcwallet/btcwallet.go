@@ -1571,18 +1571,18 @@ func (b *BtcWallet) IsSynced() (bool, int64, error) {
 	}
 
 	// Make sure the backing chain has been considered synced first.
-	if !b.wallet.ChainSynced() {
-		bestHeader, err := b.cfg.ChainSource.GetBlockHeader(bestHash)
-		if err != nil {
-			return false, 0, err
-		}
-		bestTimestamp = bestHeader.Timestamp.Unix()
-		return false, bestTimestamp, nil
-	}
+	// if !b.wallet.ChainSynced() {
+	// 	bestHeader, err := b.cfg.ChainSource.GetBlockHeader(bestHash)
+	// 	if err != nil {
+	// 		return false, 0, err
+	// 	}
+	// 	bestTimestamp = bestHeader.Timestamp.Unix()
+	// 	return false, bestTimestamp, nil
+	// }
 
 	// If the wallet hasn't yet fully synced to the node's best chain tip,
 	// then we're not yet fully synced.
-	if syncState.Height < bestHeight {
+	if syncState.Height < bestHeight || !b.wallet.ChainSynced() {
 		return false, bestTimestamp, nil
 	}
 
