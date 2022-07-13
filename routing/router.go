@@ -925,30 +925,6 @@ func (r *ChannelRouter) pruneZombieChans() error {
 		return nil
 	}
 
-	// If AssumeChannelValid is present we'll look at the disabled bit for both
-	// edges. If they're both disabled, then we can interpret this as the
-	// channel being closed and can prune it from our graph.
-	if r.cfg.AssumeChannelValid {
-		disabledChanIDs, err := r.cfg.Graph.DisabledChannelIDs()
-		if err != nil {
-			return fmt.Errorf("unable to get disabled channels ids "+
-				"chans: %v", err)
-		}
-
-		disabledEdges, err := r.cfg.Graph.FetchChanInfos(disabledChanIDs)
-		if err != nil {
-			return fmt.Errorf("unable to fetch disabled channels edges "+
-				"chans: %v", err)
-		}
-
-		// Ensuring we won't prune our own channel from the graph.
-		for _, disabledEdge := range disabledEdges {
-			if !isSelfChannelEdge(disabledEdge.Info) {
-				chansToPrune[disabledEdge.Info.ChannelID] = struct{}{}
-			}
-		}
-	}
-
 	startTime := time.Unix(0, 0)
 	endTime := time.Now().Add(-1 * chanExpiry)
 	oldEdges, err := r.cfg.Graph.ChanUpdatesInHorizon(startTime, endTime)
@@ -2660,17 +2636,6 @@ func (r *ChannelRouter) IsStaleEdgePolicy(chanID lnwire.ShortChannelID,
 	// If we know of the edge as a zombie, then we'll make some additional
 	// checks to determine if the new policy is fresh.
 	if isZombie {
-		// When running with AssumeChannelValid, we also prune channels
-		// if both of their edges are disabled. We'll mark the new
-		// policy as stale if it remains disabled.
-		if r.cfg.AssumeChannelValid {
-			isDisabled := flags&lnwire.ChanUpdateDisabled ==
-				lnwire.ChanUpdateDisabled
-			if isDisabled {
-				return true
-			}
-		}
-
 		// Otherwise, we'll fall back to our usual ChannelPruneExpiry.
 		return time.Since(timestamp) > r.cfg.ChannelPruneExpiry
 	}
