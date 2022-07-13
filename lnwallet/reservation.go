@@ -772,12 +772,6 @@ func VerifyConstraints(c *channeldb.ChannelConstraints,
 		return ErrCsvDelayTooLarge(c.CsvDelay, maxLocalCSVDelay)
 	}
 
-	// The channel reserve should always be greater or equal to the dust
-	// limit. The reservation request should be denied if otherwise.
-	if c.DustLimit > c.ChanReserve {
-		return ErrChanReserveTooSmall(c.ChanReserve, c.DustLimit)
-	}
-
 	// Validate against the maximum-sized witness script dust limit, and
 	// also ensure that the DustLimit is not too large.
 	maxWitnessLimit := DustLimitForSize(input.UnknownWitnessSize)
