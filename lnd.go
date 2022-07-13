@@ -39,6 +39,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/test/bufconn"
 	"gopkg.in/macaroon-bakery.v2/bakery"
 	"gopkg.in/macaroon.v2"
 )
@@ -378,13 +379,15 @@ func Main(cfg *Config, lisCfg ListenerCfg, implCfg *ImplementationCfg,
 	// we direct LND to connect to its loopback address rather than a
 	// wildcard to prevent certificate issues when accessing the proxy
 	// externally.
-	stopProxy, err := startRestProxy(
-		cfg, rpcServer, restDialOpts, restListen,
-	)
-	if err != nil {
-		return mkErr("error starting REST proxy: %v", err)
+	if len(cfg.RPCListeners) > 0 {
+		stopProxy, err := startRestProxy(
+			cfg, rpcServer, restDialOpts, restListen,
+		)
+		if err != nil {
+			return mkErr("error starting REST proxy: %v", err)
+		}
+		defer stopProxy()
 	}
-	defer stopProxy()
 
 	// Start leader election if we're running on etcd. Continuation will be
 	// blocked until this instance is elected as the current leader or
@@ -444,7 +447,9 @@ func Main(cfg *Config, lisCfg ListenerCfg, implCfg *ImplementationCfg,
 		ltndLog.Infof("Elected as leader (%v)", cfg.Cluster.ID)
 	}
 
+	ltndLog.Error("before build database")
 	dbs, cleanUp, err := implCfg.DatabaseBuilder.BuildDatabase(ctx)
+	ltndLog.Error("after build database")
 	switch {
 	case err == channeldb.ErrDryRunMigrationOK:
 		ltndLog.Infof("%v, exiting", err)
@@ -869,6 +874,15 @@ func startGrpcListen(cfg *Config, grpcServer *grpc.Server,
 			wg.Done()
 			_ = grpcServer.Serve(lis)
 		}(lis)
+	}
+
+	if cfg.RPCMemListen {
+		memoryRPCListener = bufconn.Listen(100)
+
+		go func() {
+			rpcsLog.Infof("RPC server listening on %s", memoryRPCListener.Addr())
+			grpcServer.Serve(memoryRPCListener)
+		}()
 	}
 
 	// If Prometheus monitoring is enabled, start the Prometheus exporter.

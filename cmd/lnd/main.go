@@ -31,7 +31,7 @@ func main() {
 		// Help was requested, exit normally.
 		os.Exit(0)
 	}
-	implCfg := loadedConfig.ImplementationConfig(shutdownInterceptor)
+	implCfg := loadedConfig.ImplementationConfig(shutdownInterceptor, nil)
 
 	// Call the "real" main in a nested manner so the defers will properly
 	// be executed in the case of a graceful shutdown.
