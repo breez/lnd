@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btclog"
+	"github.com/btcsuite/btcwallet/walletdb"
 	"github.com/lightningnetwork/lnd/kvdb"
 	"github.com/lightningnetwork/lnd/kvdb/etcd"
 	"github.com/lightningnetwork/lnd/kvdb/postgres"
@@ -226,8 +227,7 @@ type DatabaseBackends struct {
 // GetBackends returns a set of kvdb.Backends as set in the DB config.
 func (db *DB) GetBackends(ctx context.Context, chanDBPath,
 	walletDBPath, towerServerDBPath string, towerClientEnabled,
-	towerServerEnabled bool, logger btclog.Logger) (*DatabaseBackends,
-	error) {
+	towerServerEnabled bool, logger btclog.Logger, boltDBBackend walletdb.DB) (*DatabaseBackends, error) {
 
 	// We keep track of all the kvdb backends we actually open and return a
 	// reference to their close function so they can be cleaned up properly
@@ -535,19 +535,27 @@ func (db *DB) GetBackends(ctx context.Context, chanDBPath,
 		}, nil
 	}
 
-	// We're using all bbolt based databases by default.
-	boltBackend, err := kvdb.GetBoltBackend(&kvdb.BoltBackendConfig{
-		DBPath:            chanDBPath,
-		DBFileName:        ChannelDBName,
-		DBTimeout:         db.Bolt.DBTimeout,
-		NoFreelistSync:    db.Bolt.NoFreelistSync,
-		AutoCompact:       db.Bolt.AutoCompact,
-		AutoCompactMinAge: db.Bolt.AutoCompactMinAge,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error opening bolt DB: %v", err)
+	boltBackend := boltDBBackend
+	if boltBackend == nil {
+		var err error
+		// We're using all bbolt based databases by default.
+		boltBackend, err = kvdb.GetBoltBackend(&kvdb.BoltBackendConfig{
+			DBPath:            chanDBPath,
+			DBFileName:        ChannelDBName,
+			DBTimeout:         db.Bolt.DBTimeout,
+			NoFreelistSync:    db.Bolt.NoFreelistSync,
+			AutoCompact:       db.Bolt.AutoCompact,
+			AutoCompactMinAge: db.Bolt.AutoCompactMinAge,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error opening bolt DB: %v", err)
+		}
+		closeFuncs[NSChannelDB] = boltBackend.Close
+	} else {
+		closeFuncs[NSChannelDB] = func() error {
+			return nil
+		}
 	}
-	closeFuncs[NSChannelDB] = boltBackend.Close
 
 	macaroonBackend, err := kvdb.GetBoltBackend(&kvdb.BoltBackendConfig{
 		DBPath:            walletDBPath,
