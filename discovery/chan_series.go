@@ -37,7 +37,7 @@ type ChannelGraphTimeSeries interface {
 	// ID's represents the ID's that we don't know of which were in the
 	// passed superSet.
 	FilterKnownChanIDs(chain chainhash.Hash,
-		superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, error)
+		superSet []lnwire.ShortChannelID, filterZombies bool) ([]lnwire.ShortChannelID, error)
 
 	// FilterChannelRange returns the set of channels that we created
 	// between the start height and the end height. The channel IDs are
@@ -196,14 +196,14 @@ func (c *ChanSeries) UpdatesInHorizon(chain chainhash.Hash,
 //
 // NOTE: This is part of the ChannelGraphTimeSeries interface.
 func (c *ChanSeries) FilterKnownChanIDs(chain chainhash.Hash,
-	superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, error) {
+	superSet []lnwire.ShortChannelID, filterZombies bool) ([]lnwire.ShortChannelID, error) {
 
 	chanIDs := make([]uint64, 0, len(superSet))
 	for _, chanID := range superSet {
 		chanIDs = append(chanIDs, chanID.ToUint64())
 	}
 
-	newChanIDs, err := c.graph.FilterKnownChanIDs(chanIDs)
+	newChanIDs, err := c.graph.FilterKnownChanIDs(chanIDs, filterZombies)
 	if err != nil {
 		return nil, err
 	}
