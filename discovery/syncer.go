@@ -856,7 +856,7 @@ func (g *GossipSyncer) processChanRangeReply(msg *lnwire.ReplyChannelRange) erro
 	// Otherwise, this is the final response, so we'll now check to see
 	// which channels they know of that we don't.
 	newChans, err := g.cfg.channelSeries.FilterKnownChanIDs(
-		g.cfg.chainHash, g.bufferedChanRangeReplies,
+		g.cfg.chainHash, g.bufferedChanRangeReplies, !g.genHistoricalChanRangeQuery,
 	)
 	if err != nil {
 		return fmt.Errorf("unable to filter chan ids: %v", err)

@@ -91,7 +91,7 @@ func (m *mockChannelGraphTimeSeries) UpdatesInHorizon(chain chainhash.Hash,
 	return <-m.horizonResp, nil
 }
 func (m *mockChannelGraphTimeSeries) FilterKnownChanIDs(chain chainhash.Hash,
-	superSet []lnwire.ShortChannelID) ([]lnwire.ShortChannelID, error) {
+	superSet []lnwire.ShortChannelID, filterZombies bool) ([]lnwire.ShortChannelID, error) {
 
 	m.filterReq <- superSet
 
