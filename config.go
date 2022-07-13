@@ -508,6 +508,8 @@ type Config struct {
 	// Estimator is used to estimate routing probabilities.
 	Estimator routing.Estimator
 
+	InitialHeadersSyncDelta time.Duration `long:"initial-headers-sync-delta" description:"If positive, the daemon will consider itself synced when its best block timestamp is later than the current time substracting this delta. Setting this delta increases startup time since it doesn’t require the initial wallet rescan to complete before moving on with the daemon startup"`
+
 	// Dev specifies configs used for integration tests, which is always
 	// empty if not built with `integration` flag.
 	Dev *lncfg.DevConfig `group:"dev" namespace:"dev"`

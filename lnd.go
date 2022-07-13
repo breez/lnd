@@ -657,47 +657,76 @@ func Main(cfg *Config, lisCfg ListenerCfg, implCfg *ImplementationCfg,
 		return mkErr("error notifying ready: %v", err)
 	}
 
-	// We'll wait until we're fully synced to continue the start up of the
+	if implCfg.Deps != nil {
+		implCfg.Deps.ReadyChan() <- struct{}{}
+	}
+
+	// If StartBeforeSynced is not set and we're not in regtest or simnet mode,
+	// we'll wait until we're fully synced to continue the start up of the
 	// remainder of the daemon. This ensures that we don't accept any
 	// possibly invalid state transitions, or accept channels with spent
 	// funds.
-	_, bestHeight, err := activeChainControl.ChainIO.GetBestBlock()
-	if err != nil {
-		return mkErr("unable to determine chain tip: %v", err)
-	}
-
-	ltndLog.Infof("Waiting for chain backend to finish sync, "+
-		"start_height=%v", bestHeight)
-
-	for {
-		if !interceptor.Alive() {
-			return nil
-		}
-
-		synced, ts, err := activeChainControl.Wallet.IsSynced()
+	if !startBeforeSynced(cfg) {
+		_, bestHeight, err := activeChainControl.ChainIO.GetBestBlock()
 		if err != nil {
-			return mkErr("unable to determine if wallet is "+
-				"synced: %v", err)
+			return mkErr("unable to determine chain tip: %v", err)
 		}
 
-		ltndLog.Debugf("Syncing to block timestamp: %v, is synced=%v",
-			time.Unix(ts, 0), synced)
+		ltndLog.Infof("Waiting for chain backend to finish sync, "+
+			"start_height=%v", bestHeight)
 
-		if synced {
-			break
+		for {
+			if !interceptor.Alive() {
+				return nil
+			}
+
+			synced, ts, err := activeChainControl.Wallet.IsSynced()
+			if err != nil {
+				return mkErr("unable to determine if wallet is "+
+					"synced: %v", err)
+			}
+
+			if implCfg.Deps != nil && implCfg.Deps.ChainService() != nil {
+				blockStamp, err1 := implCfg.Deps.ChainService().BestBlock()
+				tipHeader, tipHeight, err2 := implCfg.Deps.ChainService().BlockHeaders.ChainTip()
+				ltndLog.Infof("got blockStamp: %v, error = %v", blockStamp, err1)
+				ltndLog.Infof("got tipHeight: %v, error = %v", tipHeight, err2)
+				if err1 != nil || err2 != nil {
+					ltndLog.Errorf("failed to get ChainService().BestBlock(): %v", err1, err2)
+				} else if blockStamp != nil && blockStamp.Height == int32(tipHeight) {
+					ts = tipHeader.Timestamp.Unix()
+				}
+			}
+
+			// Check if we are instructed to wait only for headers to be synced
+			// with chain and skip waiting for the initial rescan.
+			if cfg.InitialHeadersSyncDelta > 0 {
+				// We stop waiting if we are synched no less than than the
+				// required minimum.
+				minRequiredSyncTime := time.Now().Add(-cfg.InitialHeadersSyncDelta)
+				if time.Unix(ts, 0).After(minRequiredSyncTime) {
+					break
+				}
+			}
+
+			ltndLog.Debugf("Syncing to block timestamp: %v, is synced=%v",
+				time.Unix(ts, 0), synced)
+
+			if synced {
+				break
+			}
+
+			time.Sleep(time.Second * 1)
 		}
 
-		time.Sleep(time.Second * 1)
+		_, bestHeight, err = activeChainControl.ChainIO.GetBestBlock()
+		if err != nil {
+			return mkErr("unable to determine chain tip: %v", err)
+		}
+
+		ltndLog.Infof("Chain backend is fully synced (end_height=%v)!",
+			bestHeight)
 	}
-
-	_, bestHeight, err = activeChainControl.ChainIO.GetBestBlock()
-	if err != nil {
-		return mkErr("unable to determine chain tip: %v", err)
-	}
-
-	ltndLog.Infof("Chain backend is fully synced (end_height=%v)!",
-		bestHeight)
-
 	// With all the relevant chains initialized, we can finally start the
 	// server itself. We start the server in an asynchronous goroutine so
 	// that we are able to interrupt and shutdown the daemon gracefully in
@@ -750,6 +779,14 @@ func Main(cfg *Config, lisCfg ListenerCfg, implCfg *ImplementationCfg,
 	// the interrupt handler.
 	<-interceptor.ShutdownChannel()
 	return nil
+}
+
+func startBeforeSynced(cfg *Config) bool {
+	if cfg.Bitcoin == nil {
+		return false
+	}
+
+	return cfg.Bitcoin.StartBeforeSynced || cfg.Bitcoin.RegTest || cfg.Bitcoin.SimNet
 }
 
 // bakeMacaroon creates a new macaroon with newest version and the given
