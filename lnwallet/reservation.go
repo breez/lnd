@@ -933,14 +933,6 @@ func VerifyConstraints(bounds *channeldb.ChannelStateBounds,
 		)
 	}
 
-	// The channel reserve should always be greater or equal to the dust
-	// limit. The reservation request should be denied if otherwise.
-	if commitParams.DustLimit > bounds.ChanReserve {
-		return ErrChanReserveTooSmall(
-			bounds.ChanReserve, commitParams.DustLimit,
-		)
-	}
-
 	// Validate against the maximum-sized witness script dust limit, and
 	// also ensure that the DustLimit is not too large.
 	maxWitnessLimit := DustLimitForSize(input.UnknownWitnessSize)
