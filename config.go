@@ -294,6 +294,7 @@ type Config struct {
 	// loadConfig function. We need to expose the 'raw' strings so the
 	// command line library can access them.
 	// Only the parsed net.Addrs should be used!
+	RPCMemListen      bool     `long:"rpcmemlisten" description:"Enable in-memory rpc using bufconn"`
 	RawRPCListeners   []string `long:"rpclisten" description:"Add an interface/port/socket to listen for RPC connections"`
 	RawRESTListeners  []string `long:"restlisten" description:"Add an interface/port/socket to listen for REST connections"`
 	RawListeners      []string `long:"listen" description:"Add an interface/port to listen for peer connections"`
@@ -1503,13 +1504,13 @@ func ValidateConfig(cfg Config, interceptor signal.Interceptor, fileParser,
 
 	// At least one RPCListener is required. So listen on localhost per
 	// default.
-	if len(cfg.RawRPCListeners) == 0 {
+	if len(cfg.RawRPCListeners) == 0 && !cfg.RPCMemListen {
 		addr := fmt.Sprintf("localhost:%d", defaultRPCPort)
 		cfg.RawRPCListeners = append(cfg.RawRPCListeners, addr)
 	}
 
 	// Listen on localhost if no REST listeners were specified.
-	if len(cfg.RawRESTListeners) == 0 {
+	if len(cfg.RawRESTListeners) == 0 && !cfg.RPCMemListen {
 		addr := fmt.Sprintf("localhost:%d", defaultRESTPort)
 		cfg.RawRESTListeners = append(cfg.RawRESTListeners, addr)
 	}
@@ -1783,8 +1784,12 @@ func (c *Config) graphDatabaseDir() string {
 // ImplementationConfig returns the configuration of what actual implementations
 // should be used when creating the main lnd instance.
 func (c *Config) ImplementationConfig(
-	interceptor signal.Interceptor) *ImplementationCfg {
+	interceptor signal.Interceptor, deps Dependencies) *ImplementationCfg {
 
+	var chanDB *channeldb.DB
+	if deps != nil {
+		chanDB = deps.ChanDB()
+	}
 	// If we're using a remote signer, we still need the base wallet as a
 	// watch-only source of chain and address data. But we don't need any
 	// private key material in that btcwallet base wallet.
@@ -1794,23 +1799,25 @@ func (c *Config) ImplementationConfig(
 			c.RemoteSigner.MigrateWatchOnly,
 		)
 		return &ImplementationCfg{
+			Deps:              deps,
 			GrpcRegistrar:     rpcImpl,
 			RestRegistrar:     rpcImpl,
 			ExternalValidator: rpcImpl,
 			DatabaseBuilder: NewDefaultDatabaseBuilder(
-				c, ltndLog,
+				c, ltndLog, chanDB,
 			),
 			WalletConfigBuilder: rpcImpl,
 			ChainControlBuilder: rpcImpl,
 		}
 	}
 
-	defaultImpl := NewDefaultWalletImpl(c, ltndLog, interceptor, false)
+	defaultImpl := NewDefaultWalletImpl(c, ltndLog, interceptor, false, deps)
 	return &ImplementationCfg{
+		Deps:                deps,
 		GrpcRegistrar:       defaultImpl,
 		RestRegistrar:       defaultImpl,
 		ExternalValidator:   defaultImpl,
-		DatabaseBuilder:     NewDefaultDatabaseBuilder(c, ltndLog),
+		DatabaseBuilder:     NewDefaultDatabaseBuilder(c, ltndLog, chanDB),
 		WalletConfigBuilder: defaultImpl,
 		ChainControlBuilder: defaultImpl,
 	}

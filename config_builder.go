@@ -114,9 +114,22 @@ type ChainControlBuilder interface {
 		*btcwallet.Config) (*chainreg.ChainControl, func(), error)
 }
 
+/*
+Dependencies is used when LND is running inside another process as library.
+The caller then can use this interface to "inject" his own dependencies instead
+of letting LND creates them. It is usefull for example in logging, chain service, or
+any other dependency that is used outside LND and needs to be shared.
+*/
+type Dependencies interface {
+	ReadyChan() chan interface{}
+	ChainService() *neutrino.ChainService
+	ChanDB() *channeldb.DB
+}
+
 // ImplementationCfg is a struct that holds all configuration items for
 // components that can be implemented outside lnd itself.
 type ImplementationCfg struct {
+	Deps Dependencies
 	// GrpcRegistrar is a type that can register additional gRPC subservers
 	// before the main gRPC server is started.
 	GrpcRegistrar
@@ -148,6 +161,7 @@ type DefaultWalletImpl struct {
 	cfg         *Config
 	logger      btclog.Logger
 	interceptor signal.Interceptor
+	deps        Dependencies
 
 	watchOnly        bool
 	migrateWatchOnly bool
@@ -156,7 +170,7 @@ type DefaultWalletImpl struct {
 
 // NewDefaultWalletImpl creates a new default wallet implementation.
 func NewDefaultWalletImpl(cfg *Config, logger btclog.Logger,
-	interceptor signal.Interceptor, watchOnly bool) *DefaultWalletImpl {
+	interceptor signal.Interceptor, watchOnly bool, deps Dependencies) *DefaultWalletImpl {
 
 	return &DefaultWalletImpl{
 		cfg:         cfg,
@@ -164,6 +178,7 @@ func NewDefaultWalletImpl(cfg *Config, logger btclog.Logger,
 		interceptor: interceptor,
 		watchOnly:   watchOnly,
 		pwService:   createWalletUnlockerService(cfg),
+		deps:        deps,
 	}
 }
 
@@ -261,17 +276,25 @@ func (d *DefaultWalletImpl) BuildWalletConfig(ctx context.Context,
 	}
 	var neutrinoCS *neutrino.ChainService
 	if mainChain.Node == "neutrino" {
-		neutrinoBackend, neutrinoCleanUp, err := initNeutrinoBackend(
-			ctx, d.cfg, mainChain.ChainDir, blockCache,
-		)
-		if err != nil {
-			err := fmt.Errorf("unable to initialize neutrino "+
-				"backend: %v", err)
-			d.logger.Error(err)
-			return nil, nil, nil, err
+		if d.deps.ChainService() != nil {
+			neutrinoCS = d.deps.ChainService()
+			if err := neutrinoCS.Start(); err != nil {
+				return nil, nil, nil, err
+			}
 		}
-		cleanUpTasks = append(cleanUpTasks, neutrinoCleanUp)
-		neutrinoCS = neutrinoBackend
+		if neutrinoCS == nil {
+			neutrinoBackend, neutrinoCleanUp, err := initNeutrinoBackend(
+				ctx, d.cfg, mainChain.ChainDir, blockCache,
+			)
+			if err != nil {
+				err := fmt.Errorf("unable to initialize neutrino "+
+					"backend: %v", err)
+				d.logger.Error(err)
+				return nil, nil, nil, err
+			}
+			cleanUpTasks = append(cleanUpTasks, neutrinoCleanUp)
+			neutrinoCS = neutrinoBackend
+		}
 	}
 
 	var (
@@ -883,16 +906,18 @@ type DatabaseInstances struct {
 type DefaultDatabaseBuilder struct {
 	cfg    *Config
 	logger btclog.Logger
+	chanDB *channeldb.DB
 }
 
 // NewDefaultDatabaseBuilder returns a new instance of the default database
 // builder.
 func NewDefaultDatabaseBuilder(cfg *Config,
-	logger btclog.Logger) *DefaultDatabaseBuilder {
+	logger btclog.Logger, chanDB *channeldb.DB) *DefaultDatabaseBuilder {
 
 	return &DefaultDatabaseBuilder{
 		cfg:    cfg,
 		logger: logger,
+		chanDB: chanDB,
 	}
 }
 
@@ -913,13 +938,12 @@ func (d *DefaultDatabaseBuilder) BuildDatabase(
 	}
 
 	startOpenTime := time.Now()
-
 	databaseBackends, err := cfg.DB.GetBackends(
 		ctx, cfg.graphDatabaseDir(), cfg.networkDir, filepath.Join(
 			cfg.Watchtower.TowerDir,
 			cfg.registeredChains.PrimaryChain().String(),
 			lncfg.NormalizeNetwork(cfg.ActiveNetParams.Name),
-		), cfg.WtClient.Active, cfg.Watchtower.Active, d.logger,
+		), cfg.WtClient.Active, cfg.Watchtower.Active, d.logger, d.chanDB.Backend,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to obtain database "+
@@ -986,9 +1010,13 @@ func (d *DefaultDatabaseBuilder) BuildDatabase(
 
 	// Otherwise, we'll open two instances, one for the state we only need
 	// locally, and the other for things we want to ensure are replicated.
-	dbs.GraphDB, err = channeldb.CreateWithBackend(
-		databaseBackends.GraphDB, dbOptions...,
-	)
+	if d.chanDB == nil {
+		dbs.GraphDB, err = channeldb.CreateWithBackend(
+			databaseBackends.GraphDB, dbOptions...,
+		)
+	} else {
+		dbs.GraphDB = d.chanDB
+	}
 	switch {
 	// Give the DB a chance to dry run the migration. Since we know that
 	// both the channel state and graph DBs are still always behind the same
