@@ -87,6 +87,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/macaroon-bakery.v2/bakery"
 )
@@ -99,6 +100,9 @@ const (
 )
 
 var (
+	//MemoryRPCListener is used to enable in memory grpc API usage
+	memoryRPCListener *bufconn.Listener
+
 	// readPermissions is a slice of all entities that allow read
 	// permissions for authorization purposes, all lowercase.
 	readPermissions = []bakery.Op{
@@ -1006,6 +1010,14 @@ func (r *rpcServer) Stop() error {
 	}
 
 	return nil
+}
+
+// MemDial returns a net.Conn for in-memory RPC
+func MemDial() (net.Conn, error) {
+	if memoryRPCListener == nil {
+		return nil, errors.New("Memory RPC is not configured")
+	}
+	return memoryRPCListener.Dial()
 }
 
 // addrPairsToOutputs converts a map describing a set of outputs to be created,
