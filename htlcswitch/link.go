@@ -2731,6 +2731,7 @@ func (l *channelLink) canSendHtlc(policy ForwardingPolicy,
 		return NewLinkError(&lnwire.FailExpiryTooFar{})
 	}
 
+	l.log.Errorf("Trying to send amt: %v over the channel: %v with bandwidth: %v", amt, l.channel.ChanPoint, l.Bandwidth())
 	// Check to see if there is enough balance in this channel.
 	if amt > l.Bandwidth() {
 		l.log.Warnf("insufficient bandwidth to route htlc: %v is "+

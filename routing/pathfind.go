@@ -393,6 +393,7 @@ func getOutgoingBalance(node route.Vertex, outgoingChans map[uint64]struct{},
 		bandwidth, ok := bandwidthHints.availableChanBandwidth(
 			chanID, 0,
 		)
+		log.Errorf("bandwidthHints: %#v, chanID: %v, bandwidth: %v, ok: %v", bandwidthHints, bandwidth, ok)
 
 		// If the bandwidth is not available, use the channel capacity.
 		// This can happen when a channel is added to the graph after
@@ -512,6 +513,8 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	// balance available.
 	self := g.graph.sourceNode()
 
+	var splitNeeded, insufficientBalance bool
+
 	if source == self {
 		max, total, err := getOutgoingBalance(
 			self, outgoingChanMap, g.bandwidthHints, g.graph,
@@ -523,13 +526,17 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// If the total outgoing balance isn't sufficient, it will be
 		// impossible to complete the payment.
 		if total < amt {
-			return nil, 0, errInsufficientBalance
+			if max < total {
+				return nil, 0, errInsufficientBalance
+			}
+			insufficientBalance = true
 		}
 
 		// If there is only not enough capacity on a single route, it
 		// may still be possible to complete the payment by splitting.
 		if max < amt {
-			return nil, 0, errNoPathFound
+			splitNeeded = true
+			amt = max
 		}
 	}
 
@@ -888,8 +895,12 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 				continue
 			}
 
+			var amtForPolicy lnwire.MilliSatoshi
+			if !splitNeeded || fromNode != source {
+				amtForPolicy = amtToSend
+			}
 			edge := edgeUnifier.getEdge(
-				amtToSend, g.bandwidthHints,
+				amtForPolicy, g.bandwidthHints,
 			)
 
 			if edge == nil {
@@ -932,6 +943,9 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	// target.
 	var pathEdges []*channeldb.CachedEdgePolicy
 	currentNode := source
+	if n, ok := distance[source]; ok && splitNeeded {
+		n.amountToReceive = amt
+	}
 	for {
 		// Determine the next hop forward using the next map.
 		currentNodeWithDist, ok := distance[currentNode]
@@ -943,6 +957,14 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 
 		// Add the next hop to the list of path edges.
 		pathEdges = append(pathEdges, currentNodeWithDist.nextHop)
+
+		if splitNeeded && currentNode != source {
+			log.Errorf("Removing fees - curentNode(dist): %v (%v) nextHop: %v", currentNodeWithDist.node.String(), currentNodeWithDist.dist, currentNodeWithDist.nextHop.ToNodePubKey().String())
+			log.Errorf("Next hop channel id: %v, FeeBaseMSat: %v,  FeeProportionalMillionths: %v", (currentNodeWithDist.nextHop).ChannelID, (currentNodeWithDist.nextHop).FeeBaseMSat, (currentNodeWithDist.nextHop).FeeProportionalMillionths)
+			fees := (currentNodeWithDist.nextHop).ComputeFeeFromIncoming(amt)
+			log.Errorf("Removing fees - before: %v fee: %v after: %v", amt, fees, amt-fees)
+			amt -= fees + 1
+		}
 
 		// Advance current node.
 		currentNode = currentNodeWithDist.nextHop.ToNodePubKey()
@@ -971,8 +993,15 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	log.Debugf("Found route: probability=%v, hops=%v, fee=%v",
 		distance[source].probability, len(pathEdges),
 		distance[source].amountToReceive-amt)
-
-	return pathEdges, distance[source].probability, nil
+	var e error
+	if splitNeeded {
+		if insufficientBalance {
+			e = extendedNoRouteError{err: errInsufficientBalance, amt: amt}
+		} else {
+			e = extendedNoRouteError{err: errNoPathFound, amt: amt}
+		}
+	}
+	return pathEdges, distance[source].probability, e
 }
 
 // getProbabilityBasedDist converts a weight into a distance that takes into
