@@ -128,6 +128,8 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, error) {
 		paySession:   p.paySession,
 	}
 
+	log.Errorf("Resuming payment for hash %v", p.identifier)
+
 	// When the payment lifecycle loop exits, we make sure to signal any
 	// sub goroutine of the shardHandler to exit, then wait for them to
 	// return.
@@ -144,7 +146,7 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, error) {
 	for _, a := range payment.InFlightHTLCs() {
 		a := a
 
-		log.Infof("Resuming payment shard %v for payment %v",
+		log.Errorf("Resuming payment shard %v for hash %v",
 			a.AttemptID, p.identifier)
 
 		shardHandler.collectResultAsync(&a.HTLCAttemptInfo)

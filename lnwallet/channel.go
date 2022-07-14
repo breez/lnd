@@ -6974,11 +6974,13 @@ func (lc *LightningChannel) availableBalance() (lnwire.MilliSatoshi, int64) {
 	ourLocalCommitBalance, commitWeight := lc.availableCommitmentBalance(
 		htlcView, false,
 	)
+	lc.log.Infof("availableBalance() - ShortChannelID: %v, ourLocalCommitBalance: %v, commitWeight: %v", lc.channelState.ShortChannelID, ourLocalCommitBalance, commitWeight)
 
 	// Do the same calculation from the remote commitment point of view.
 	ourRemoteCommitBalance, _ := lc.availableCommitmentBalance(
 		htlcView, true,
 	)
+	lc.log.Infof("availableBalance() - ShortChannelID: %v, ourRemoteCommitBalance: %v", lc.channelState.ShortChannelID, ourRemoteCommitBalance)
 
 	// Return which ever balance is lowest.
 	if ourRemoteCommitBalance < ourLocalCommitBalance {

@@ -160,7 +160,7 @@ func (u *edgeUnifier) getEdgeLocal(amt lnwire.MilliSatoshi,
 
 	for _, edge := range u.edges {
 		// Check valid amount range for the channel.
-		if !edge.amtInRange(amt) {
+		if amt > 0 && !edge.amtInRange(amt) {
 			log.Debugf("Amount %v not in range for edge %v",
 				amt, edge.policy.ChannelID)
 			continue
