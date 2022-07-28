@@ -6598,6 +6598,10 @@
         "spend_unconfirmed": {
           "type": "boolean",
           "description": "Whether unconfirmed outputs should be used as inputs for the transaction."
+        },
+        "dry_run": {
+          "type": "boolean",
+          "title": "If set, then the transaction won't be broadcasted"
         }
       }
     },
@@ -6607,6 +6611,11 @@
         "txid": {
           "type": "string",
           "title": "The transaction ID of the transaction"
+        },
+        "tx": {
+          "type": "string",
+          "format": "byte",
+          "title": "The transaction"
         }
       }
     },

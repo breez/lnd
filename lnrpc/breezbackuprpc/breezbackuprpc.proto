@@ -8,7 +8,7 @@ message GetBackupRequest {
 }
 
 message GetBackupResponse {
-    repeated string files = 1 [ json_name = "files" ];
+    repeated string files = 1 [json_name = "files"];
 }
 
 service BreezBackuper {
