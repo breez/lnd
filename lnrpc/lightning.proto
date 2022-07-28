@@ -1210,10 +1210,16 @@ message SendCoinsRequest {
 
     // A list of selected outpoints as inputs for the transaction.
     repeated OutPoint outpoints = 11;
+
+    // If set, then the transaction won't be broadcasted
+    bool dry_run = 12;
 }
 message SendCoinsResponse {
     // The transaction ID of the transaction
     string txid = 1;
+
+    // The transaction
+    bytes tx = 2;
 }
 
 message ListUnspentRequest {
