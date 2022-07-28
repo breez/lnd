@@ -1306,6 +1306,7 @@ func (r *rpcServer) SendCoins(ctx context.Context,
 	}
 
 	var txid *chainhash.Hash
+	var txRaw []byte
 
 	wallet := r.server.cc.Wallet
 
@@ -1417,22 +1418,35 @@ func (r *rpcServer) SendCoins(ctx context.Context,
 			return nil, err
 		}
 
-		rpcsLog.Debugf("Sweeping all coins from wallet to addr=%v, "+
-			"with tx=%v", in.Addr, spew.Sdump(sweepTxPkg.SweepTx))
-
-		// As our sweep transaction was created, successfully, we'll
-		// now attempt to publish it, cancelling the sweep pkg to
-		// return all outputs if it fails.
-		err = wallet.PublishTransaction(sweepTxPkg.SweepTx, label)
-		if err != nil {
+		sweepTx := sweepTxPkg.SweepTx
+		if in.DryRun {
+			rpcsLog.Debugf("Sweeping all coins (dry run) from wallet to addr=%v, "+
+				"with tx=%v", in.Addr, spew.Sdump(sweepTx))
 			sweepTxPkg.CancelSweepAttempt()
+		} else {
+			rpcsLog.Debugf("Sweeping all coins from wallet to addr=%v, "+
+				"with tx=%v", in.Addr, spew.Sdump(sweepTx))
 
-			return nil, fmt.Errorf("unable to broadcast sweep "+
-				"transaction: %v", err)
+			// As our sweep transaction was created, successfully, we'll
+			// now attempt to publish it, cancelling the sweep pkg to
+			// return all outputs if it fails.
+			err = wallet.PublishTransaction(sweepTx, label)
+			if err != nil {
+				sweepTxPkg.CancelSweepAttempt()
+
+				return nil, fmt.Errorf("unable to broadcast sweep "+
+					"transaction: %v", err)
+			}
 		}
 
-		sweepTXID := sweepTxPkg.SweepTx.TxHash()
+		sweepTXID := sweepTx.TxHash()
 		txid = &sweepTXID
+		var buf bytes.Buffer
+		if err := sweepTx.Serialize(&buf); err != nil {
+			return nil, fmt.Errorf("unable to serialize sweep "+
+				"transaction: %v", err)
+		}
+		txRaw = buf.Bytes()
 	} else {
 
 		// We'll now construct out payment map, and use the wallet's
@@ -1459,7 +1473,7 @@ func (r *rpcServer) SendCoins(ctx context.Context,
 
 	rpcsLog.Infof("[sendcoins] spend generated txid: %v", txid.String())
 
-	return &lnrpc.SendCoinsResponse{Txid: txid.String()}, nil
+	return &lnrpc.SendCoinsResponse{Txid: txid.String(), Tx: txRaw}, nil
 }
 
 // SendMany handles a request for a transaction create multiple specified

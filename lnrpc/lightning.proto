@@ -1177,10 +1177,16 @@ message SendCoinsRequest {
 
     // Whether unconfirmed outputs should be used as inputs for the transaction.
     bool spend_unconfirmed = 9;
+
+    // If set, then the transaction won't be broadcasted
+    bool dry_run = 10;
 }
 message SendCoinsResponse {
     // The transaction ID of the transaction
     string txid = 1;
+
+    // The transaction
+    bytes tx = 2;
 }
 
 message ListUnspentRequest {
