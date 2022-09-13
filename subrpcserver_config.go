@@ -24,6 +24,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc/peersrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
+	"github.com/lightningnetwork/lnd/lnrpc/submarineswaprpc"
 	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/watchtowerrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/wtclientrpc"
@@ -95,9 +96,10 @@ type subRPCServerConfigs struct {
 	// DevRPC is a sub-RPC server that exposes functionality that allows
 	// developers manipulate LND state that is normally not possible.
 	// Should only be used for development purposes.
-	DevRPC         *devrpc.Config         `group:"devrpc" namespace:"devrpc"`
-	BackupRPC      *backuprpc.Config      `group:"backuprpc" namespace:"backuprpc"`
-	BreezBackupRPC *breezbackuprpc.Config `group:"breezbackuprpc" namespace:"breezbackuprpc"`
+	DevRPC           *devrpc.Config           `group:"devrpc" namespace:"devrpc"`
+	BackupRPC        *backuprpc.Config        `group:"backuprpc" namespace:"backuprpc"`
+	BreezBackupRPC   *breezbackuprpc.Config   `group:"breezbackuprpc" namespace:"breezbackuprpc"`
+	SubmarineSwapRPC *submarineswaprpc.Config `group:"submarineswaprpc" namespace:"submarineswaprpc"`
 }
 
 // PopulateDependencies attempts to iterate through all the sub-server configs
@@ -318,6 +320,24 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 			)
 			subCfgValue.FieldByName("Tower").Set(
 				reflect.ValueOf(tower),
+			)
+		case *submarineswaprpc.Config:
+			subCfgValue := extractReflectValue(subCfg)
+
+			subCfgValue.FieldByName("NetworkDir").Set(
+				reflect.ValueOf(networkDir),
+			)
+			subCfgValue.FieldByName("ActiveNetParams").Set(
+				reflect.ValueOf(activeNetParams),
+			)
+			subCfgValue.FieldByName("MacService").Set(
+				reflect.ValueOf(macService),
+			)
+			subCfgValue.FieldByName("FeeEstimator").Set(
+				reflect.ValueOf(cc.FeeEstimator),
+			)
+			subCfgValue.FieldByName("Wallet").Set(
+				reflect.ValueOf(cc.Wallet),
 			)
 
 		case *wtclientrpc.Config:
