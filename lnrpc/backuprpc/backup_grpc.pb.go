@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // BackupClient is the client API for Backup service.
@@ -29,7 +30,7 @@ func NewBackupClient(cc grpc.ClientConnInterface) BackupClient {
 }
 
 func (c *backupClient) SubscribeBackupEvents(ctx context.Context, in *BackupEventSubscription, opts ...grpc.CallOption) (Backup_SubscribeBackupEventsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Backup_serviceDesc.Streams[0], "/backuprpc.Backup/SubscribeBackupEvents", opts...)
+	stream, err := c.cc.NewStream(ctx, &Backup_ServiceDesc.Streams[0], "/backuprpc.Backup/SubscribeBackupEvents", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +85,8 @@ type UnsafeBackupServer interface {
 	mustEmbedUnimplementedBackupServer()
 }
 
-func RegisterBackupServer(s *grpc.Server, srv BackupServer) {
-	s.RegisterService(&_Backup_serviceDesc, srv)
+func RegisterBackupServer(s grpc.ServiceRegistrar, srv BackupServer) {
+	s.RegisterService(&Backup_ServiceDesc, srv)
 }
 
 func _Backup_SubscribeBackupEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -109,7 +110,10 @@ func (x *backupSubscribeBackupEventsServer) Send(m *BackupEventUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-var _Backup_serviceDesc = grpc.ServiceDesc{
+// Backup_ServiceDesc is the grpc.ServiceDesc for Backup service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Backup_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "backuprpc.Backup",
 	HandlerType: (*BackupServer)(nil),
 	Methods:     []grpc.MethodDesc{},
