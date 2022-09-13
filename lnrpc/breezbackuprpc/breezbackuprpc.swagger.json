@@ -15,8 +15,44 @@
   "produces": [
     "application/json"
   ],
-  "paths": {},
+  "paths": {
+    "/v2/breezbackuper/getbackup": {
+      "post": {
+        "operationId": "BreezBackuper_GetBackup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/breezbackuprpcGetBackupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/breezbackuprpcGetBackupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "BreezBackuper"
+        ]
+      }
+    }
+  },
   "definitions": {
+    "breezbackuprpcGetBackupRequest": {
+      "type": "object"
+    },
     "breezbackuprpcGetBackupResponse": {
       "type": "object",
       "properties": {
@@ -31,11 +67,14 @@
     "protobufAny": {
       "type": "object",
       "properties": {
-        "@type": {
+        "type_url": {
           "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
         }
-      },
-      "additionalProperties": {}
+      }
     },
     "rpcStatus": {
       "type": "object",
