@@ -49,6 +49,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tv42/zbase32 v0.0.0-20160707012821-501572607d02
 	github.com/urfave/cli v1.22.9
+	go.etcd.io/bbolt v1.3.11
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v3 v3.5.7
 	golang.org/x/crypto v0.22.0
@@ -157,7 +158,6 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	gitlab.com/yawning/bsaes.git v0.0.0-20190805113838-0a714cd429ec // indirect
-	go.etcd.io/bbolt v1.3.11 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.7 // indirect
 	go.etcd.io/etcd/client/v2 v2.305.7 // indirect
 	go.etcd.io/etcd/pkg/v3 v3.5.7 // indirect
@@ -210,6 +210,10 @@ replace github.com/lightningnetwork/lnd/sqldb => ./sqldb
 // We want to format raw bytes as hex instead of base64. The forked version
 // allows us to specify that as an option.
 replace google.golang.org/protobuf => github.com/lightninglabs/protobuf-go-hex-display v1.30.0-hex-display
+
+replace github.com/btcsuite/btcwallet => github.com/breez/btcwallet v0.16.10-0.20241026173810-25a62401fb87
+
+replace github.com/btcsuite/btcwallet/walletdb => github.com/breez/btcwallet/walletdb v1.4.3-0.20241026173810-25a62401fb87
 
 // If you change this please also update .github/pull_request_template.md,
 // docs/INSTALL.md and GO_IMAGE in lnrpc/gen_protos_docker.sh.
