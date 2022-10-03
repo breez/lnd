@@ -40,6 +40,9 @@ details](../remote-signing.md#migrating-a-remote-signing-setup-from-014x-to-015x
 
 ## Taproot
 
+* [Add `p2tr` address type to account
+  import](https://github.com/lightningnetwork/lnd/pull/6966).
+
 **NOTE** for users running a remote signing setup: A manual account import is
 necessary when upgrading from `lnd v0.14.x-beta` to `lnd v0.15.x-beta`, see [the
 remote signing documentation for more
