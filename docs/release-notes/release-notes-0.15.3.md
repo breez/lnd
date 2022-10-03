@@ -38,6 +38,13 @@ details](../remote-signing.md#migrating-a-remote-signing-setup-from-014x-to-015x
 * [Refactor hop hint selection
   algorithm](https://github.com/lightningnetwork/lnd/pull/6914)
 
+## Taproot
+
+**NOTE** for users running a remote signing setup: A manual account import is
+necessary when upgrading from `lnd v0.14.x-beta` to `lnd v0.15.x-beta`, see [the
+remote signing documentation for more
+details](../remote-signing.md#migrating-a-remote-signing-setup-from-014x-to-015x).
+
 # Contributors (Alphabetical Order)
 
 * Eugene Siegel
