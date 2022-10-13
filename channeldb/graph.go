@@ -248,6 +248,31 @@ func NewChannelGraph(db kvdb.Backend, rejectCacheSize, chanCacheSize int,
 	return g, nil
 }
 
+func (c *ChannelGraph) ReloadCache() error {
+	err := c.ForEachNodeCacheable(
+		func(tx kvdb.RTx, node GraphCacheNode) error {
+			c.graphCache.AddNodeFeatures(node)
+
+			return nil
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	err = c.ForEachChannel(func(info *ChannelEdgeInfo,
+		policy1, policy2 *ChannelEdgePolicy) error {
+
+		c.graphCache.AddChannel(info, policy1, policy2)
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // channelMapKey is the key structure used for storing channel edge policies.
 type channelMapKey struct {
 	nodeKey route.Vertex
