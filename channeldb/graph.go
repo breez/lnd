@@ -1847,6 +1847,10 @@ func (c *ChannelGraph) HighestChanID() (uint64, error) {
 
 		cid := uint64(0)
 		lastChanID, _ := cidCursor.Last()
+		selfNode, err := c.SourceNode()
+		if err != nil {
+			return fmt.Errorf("unable to get current source node: %v", err)
+		}
 
 		for lastChanID != nil {
 			// Found a channel, we'll de serialize the channel ID.
@@ -1854,7 +1858,20 @@ func (c *ChannelGraph) HighestChanID() (uint64, error) {
 
 			// we are only interested in the channel id if it is not an alias as
 			// Otherwise its block height doesn't reflect the real block height.
-			if !aliasmgr.IsAlias(id) {
+			edge, _, _, err := c.FetchChannelEdgesByID(id.ToUint64())
+			if err != nil {
+				return err
+			}
+			pk1, err := edge.NodeKey1()
+			if err != nil {
+				return err
+			}
+			pk2, err := edge.NodeKey2()
+			if err != nil {
+				return err
+			}
+			isOurChannel := selfNode.pubKey.IsEqual(pk1) || selfNode.pubKey.IsEqual(pk2)
+			if !aliasmgr.IsAlias(id) && !isOurChannel {
 				cid = id.ToUint64()
 				break
 			}
