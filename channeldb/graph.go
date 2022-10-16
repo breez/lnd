@@ -1845,17 +1845,27 @@ func (c *ChannelGraph) HighestChanID() (uint64, error) {
 		// and use that to seek to the "end" of our known rage.
 		cidCursor := edgeIndex.ReadCursor()
 
+		cid := uint64(0)
 		lastChanID, _ := cidCursor.Last()
+
+		for lastChanID != nil {
+			// Found a channel, we'll de serialize the channel ID.
+			id := lnwire.NewShortChanIDFromInt(byteOrder.Uint64(lastChanID))
+
+			// we are only interested in the channel id if it is not an alias as
+			// Otherwise its block height doesn't reflect the real block height.
+			if !aliasmgr.IsAlias(id) {
+				cid = id.ToUint64()
+				break
+			}
+			lastChanID, _ = cidCursor.Prev()
+		}
 
 		// If there's no key, then this means that we don't actually
 		// know of any channels, so we'll return a predicable error.
-		if lastChanID == nil {
+		if cid == 0 {
 			return ErrGraphNoEdgesFound
 		}
-
-		// Otherwise, we'll de serialize the channel ID and return it
-		// to the caller.
-		cid = byteOrder.Uint64(lastChanID)
 		return nil
 	}, func() {
 		cid = 0
