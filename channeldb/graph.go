@@ -1870,7 +1870,7 @@ func (c *ChannelGraph) HighestChanID() (uint64, error) {
 			if err != nil {
 				return err
 			}
-			isOurChannel := selfNode.pubKey.IsEqual(pk1) || selfNode.pubKey.IsEqual(pk2)
+			isOurChannel := pk1 != nil && selfNode.pubKey.IsEqual(pk1) || pk2 != nil && selfNode.pubKey.IsEqual(pk2)
 			if !aliasmgr.IsAlias(id) && !isOurChannel {
 				cid = id.ToUint64()
 				break
