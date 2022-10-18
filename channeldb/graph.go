@@ -1844,8 +1844,6 @@ func (c *ChannelGraph) HighestChanID() (uint64, error) {
 		// In order to find the highest chan ID, we'll fetch a cursor
 		// and use that to seek to the "end" of our known rage.
 		cidCursor := edgeIndex.ReadCursor()
-
-		cid := uint64(0)
 		lastChanID, _ := cidCursor.Last()
 		selfNode, err := c.SourceNode()
 		if err != nil {
