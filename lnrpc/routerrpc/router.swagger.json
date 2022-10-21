@@ -1320,11 +1320,15 @@
         "failure_message": {
           "type": "string",
           "format": "byte",
-          "description": "Encrypted failure message in case the resolve action is Fail.\n\nIf failure_message is specified, the failure_code field must be set\nto zero."
+          "description": "Failure message in case the resolve action is Fail. The field\nfailure_message_unencrypted indicates whether this message is already\nencrypted for the first hop.\n\nIf failure_message is specified, the failure_code field must be set to\nzero."
+        },
+        "failure_message_unencrypted": {
+          "type": "boolean",
+          "description": "Indicates whether the failure message still needs to be encrypted for the\nfirst hop."
         },
         "failure_code": {
           "$ref": "#/definitions/FailureFailureCode",
-          "description": "Return the specified failure code in case the resolve action is Fail. The\nmessage data fields are populated automatically.\n\nIf a non-zero failure_code is specified, failure_message must not be set.\n\nFor backwards-compatibility reasons, TEMPORARY_CHANNEL_FAILURE is the\ndefault value for this field."
+          "description": "Deprecated: use failure_message with failure_message_unencrypted.\n\nReturn the specified failure code in case the resolve action is Fail. The\nmessage data fields are populated automatically.\n\nIf a non-zero failure_code is specified, failure_message must not be set.\n\nFor backwards-compatibility reasons, TEMPORARY_CHANNEL_FAILURE is the\ndefault value for this field."
         },
         "outgoing_amount_msat": {
           "type": "string",

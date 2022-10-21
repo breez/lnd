@@ -1,6 +1,7 @@
 package htlcswitch
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"sync"
@@ -124,8 +125,14 @@ type FwdResolution struct {
 	OnionBlob      [lnwire.OnionPacketSize]byte
 
 	// EncryptedFailureMessage is the encrypted failure message that is to
-	// be passed back to the sender if action is FwdActionFail.
+	// be passed back to the sender if action is FwdActionFail. This field
+	// is mutually exclusive with FailureMessage.
 	EncryptedFailureMessage []byte
+
+	// FailureMessage is the decoded failure message that is to be encrypted
+	// for the first hop. This field is mutually exclusive with
+	// EncryptedFailureMessage.
+	FailureMessage lnwire.FailureMessage
 
 	// FailureCode is the failure code that is to be passed back to the
 	// sender if action is FwdActionFail.
@@ -384,11 +391,32 @@ func (s *InterceptableSwitch) resolve(res *FwdResolution) error {
 		return intercepted.Settle(res.Preimage)
 
 	case FwdActionFail:
-		if len(res.EncryptedFailureMessage) > 0 {
-			return intercepted.Fail(res.EncryptedFailureMessage)
-		}
+		switch {
+		// Fail with encrypted failure message.
+		case len(res.EncryptedFailureMessage) > 0:
+			return intercepted.Fail(
+				res.EncryptedFailureMessage, false,
+			)
 
-		return intercepted.FailWithCode(res.FailureCode)
+		// Fail with known failure message that is to be encoded and
+		// encrypted.
+		case res.FailureMessage != nil:
+			var encodedMsg bytes.Buffer
+			err := lnwire.EncodeFailureMessage(
+				&encodedMsg, res.FailureMessage, 0,
+			)
+			if err != nil {
+				return err
+			}
+
+			return intercepted.Fail(
+				encodedMsg.Bytes(), true,
+			)
+
+		// Fail with failure code.
+		default:
+			return intercepted.FailWithCode(res.FailureCode)
+		}
 
 	default:
 		return fmt.Errorf("unrecognized action %v", res.Action)
@@ -627,10 +655,24 @@ func (f *interceptedForward) Resume(outgoingAmount lnwire.MilliSatoshi, outgoing
 	return f.htlcSwitch.ForwardPackets(nil, f.packet)
 }
 
-// Fail notifies the intention to Fail an existing hold forward with an
-// encrypted failure reason.
-func (f *interceptedForward) Fail(reason []byte) error {
-	obfuscatedReason := f.packet.obfuscator.IntermediateEncrypt(reason)
+// Fail notifies the intention to Fail an existing hold forward.
+func (f *interceptedForward) Fail(reason []byte, encryptFirstHop bool) error {
+	var (
+		obfuscatedReason []byte
+		obfuscator       = f.packet.obfuscator
+	)
+
+	if encryptFirstHop {
+		var err error
+		obfuscatedReason, err = obfuscator.EncryptEncodedFirstHop(
+			reason,
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		obfuscatedReason = obfuscator.IntermediateEncrypt(reason)
+	}
 
 	return f.resolve(&lnwire.UpdateFailHTLC{
 		Reason: obfuscatedReason,
