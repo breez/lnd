@@ -154,29 +154,9 @@ func (r *forwardInterceptor) resolveFromClient(
 			})
 		}
 
-		var code lnwire.FailCode
-		switch in.FailureCode {
-		case lnrpc.Failure_INVALID_ONION_HMAC:
-			code = lnwire.CodeInvalidOnionHmac
-
-		case lnrpc.Failure_INVALID_ONION_KEY:
-			code = lnwire.CodeInvalidOnionKey
-
-		case lnrpc.Failure_INVALID_ONION_VERSION:
-			code = lnwire.CodeInvalidOnionVersion
-
-		case lnrpc.Failure_INCORRECT_OR_UNKNOWN_PAYMENT_DETAILS:
-			code = lnwire.CodeIncorrectOrUnknownPaymentDetails
-
-		// Default to TemporaryChannelFailure.
-		case 0, lnrpc.Failure_TEMPORARY_CHANNEL_FAILURE:
-			code = lnwire.CodeTemporaryChannelFailure
-
-		default:
-			return status.Errorf(
-				codes.InvalidArgument,
-				"unsupported failure code: %v", in.FailureCode,
-			)
+		code, err := unmarshalFailCode(in.FailureCode)
+		if err != nil {
+			return err
 		}
 
 		return r.htlcSwitch.Resolve(&htlcswitch.FwdResolution{
@@ -206,4 +186,32 @@ func (r *forwardInterceptor) resolveFromClient(
 			"unrecognized resolve action %v", in.Action,
 		)
 	}
+}
+
+func unmarshalFailCode(failureCode lnrpc.Failure_FailureCode) (lnwire.FailCode,
+	error) {
+
+	var code lnwire.FailCode
+	switch failureCode {
+	case lnrpc.Failure_INVALID_ONION_HMAC:
+		code = lnwire.CodeInvalidOnionHmac
+
+	case lnrpc.Failure_INVALID_ONION_KEY:
+		code = lnwire.CodeInvalidOnionKey
+
+	case lnrpc.Failure_INVALID_ONION_VERSION:
+		code = lnwire.CodeInvalidOnionVersion
+
+	// Default to TemporaryChannelFailure.
+	case 0, lnrpc.Failure_TEMPORARY_CHANNEL_FAILURE:
+		code = lnwire.CodeTemporaryChannelFailure
+
+	default:
+		return 0, status.Errorf(
+			codes.InvalidArgument,
+			"unsupported failure code: %v", failureCode,
+		)
+	}
+
+	return code, nil
 }
