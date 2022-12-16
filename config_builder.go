@@ -938,12 +938,16 @@ func (d *DefaultDatabaseBuilder) BuildDatabase(
 	}
 
 	startOpenTime := time.Now()
+	var chanDBBackend walletdb.DB
+	if d.chanDB != nil {
+		chanDBBackend = d.chanDB.Backend
+	}
 	databaseBackends, err := cfg.DB.GetBackends(
 		ctx, cfg.graphDatabaseDir(), cfg.networkDir, filepath.Join(
 			cfg.Watchtower.TowerDir,
 			cfg.registeredChains.PrimaryChain().String(),
 			lncfg.NormalizeNetwork(cfg.ActiveNetParams.Name),
-		), cfg.WtClient.Active, cfg.Watchtower.Active, d.logger, d.chanDB.Backend,
+		), cfg.WtClient.Active, cfg.Watchtower.Active, d.logger, chanDBBackend,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to obtain database "+
