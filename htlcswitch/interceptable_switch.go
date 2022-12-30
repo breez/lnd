@@ -663,6 +663,9 @@ func (f *interceptedForward) FailWithCode(code lnwire.FailCode) error {
 			OnionSHA256: shaOnionBlob(),
 		}
 
+	case lnwire.CodeIncorrectOrUnknownPaymentDetails:
+		failureMsg = &lnwire.FailIncorrectDetails{}
+
 	case lnwire.CodeTemporaryChannelFailure:
 		update := f.htlcSwitch.failAliasUpdate(
 			f.packet.incomingChanID, true,
