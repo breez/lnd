@@ -159,6 +159,9 @@ func (r *forwardInterceptor) resolveFromClient(
 		case lnrpc.Failure_INVALID_ONION_VERSION:
 			code = lnwire.CodeInvalidOnionVersion
 
+		case lnrpc.Failure_INCORRECT_OR_UNKNOWN_PAYMENT_DETAILS:
+			code = lnwire.CodeIncorrectOrUnknownPaymentDetails
+
 		// Default to TemporaryChannelFailure.
 		case 0, lnrpc.Failure_TEMPORARY_CHANNEL_FAILURE:
 			code = lnwire.CodeTemporaryChannelFailure
