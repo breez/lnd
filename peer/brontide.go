@@ -1699,8 +1699,8 @@ func (p *Brontide) handleWarning(msg *lnwire.Warning) bool {
 		return false
 
 	// If not we hand the warning to the channel link for this channel.
-	case p.isActiveChannel(msg.ChanID):
-		return true
+	//case p.isActiveChannel(msg.ChanID):
+	//	return true
 
 	default:
 		return false
