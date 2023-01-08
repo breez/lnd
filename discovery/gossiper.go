@@ -918,6 +918,14 @@ func (d *deDupedAnnouncements) addMsg(message networkMsg) {
 	// Channel updates are identified by the (short channel id,
 	// channelflags) tuple.
 	case *lnwire.ChannelUpdate:
+		if msg.HtlcMaximumMsat == 0 {
+			log.Debugf("ignored channel update message without HtlcMaximumMsat: "+
+				"peer=%v, source=%x, msg=%s, ", message.peer,
+				message.source.SerializeCompressed(),
+				msg.MsgType())
+			return
+		}
+
 		sender := route.NewVertex(message.source)
 		deDupKey := channelUpdateID{
 			msg.ShortChannelID,
