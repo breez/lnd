@@ -22,7 +22,8 @@ type MessageType uint16
 // The currently defined message types within this current version of the
 // Lightning protocol.
 const (
-	MsgInit                    MessageType = 16
+	MsgWarning                 MessageType = 1
+	MsgInit                                = 16
 	MsgError                               = 17
 	MsgPing                                = 18
 	MsgPong                                = 19
@@ -75,6 +76,8 @@ func ErrorPayloadTooLarge(size int) error {
 // String return the string representation of message type.
 func (t MessageType) String() string {
 	switch t {
+	case MsgWarning:
+		return "Warning"
 	case MsgInit:
 		return "Init"
 	case MsgOpenChannel:
@@ -146,8 +149,8 @@ type UnknownMessage struct {
 //
 // This is part of the error interface.
 func (u *UnknownMessage) Error() string {
-	return fmt.Sprintf("unable to parse message of unknown type: %v",
-		u.messageType)
+	return fmt.Sprintf("unable to parse message of unknown type: %v, value: %v",
+		u.messageType, uint16(u.messageType))
 }
 
 // Serializable is an interface which defines a lightning wire serializable
@@ -175,6 +178,8 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 	var msg Message
 
 	switch msgType {
+	case MsgWarning:
+		msg = &Warning{}
 	case MsgInit:
 		msg = &Init{}
 	case MsgOpenChannel:
