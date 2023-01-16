@@ -853,7 +853,7 @@ func (c *ChannelArbitrator) stateStep(
 
 		// Otherwise, we'll log that we checked the HTLC actions as the
 		// commitment transaction has already been broadcast.
-		log.Tracef("ChannelArbitrator(%v): logging chain_actions=%v",
+		log.Debugf("ChannelArbitrator(%v): logging chain_actions=%v",
 			c.cfg.ChanPoint,
 			newLogClosure(func() string {
 				return spew.Sdump(chainActions)
