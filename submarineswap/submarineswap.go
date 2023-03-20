@@ -715,7 +715,7 @@ func RefundTx(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwalle
 		refundTx.TxOut[0], txrules.DefaultRelayFeePerKb,
 	)
 	if err != nil {
-		return nil, 0, fmt.Errorf("fees are to high for the given amount %w", err)
+		return nil, 0, fmt.Errorf("fees are too high for the given amount %w", err)
 	}
 
 	sigHashes := input.NewTxSigHashesV0Only(refundTx)
