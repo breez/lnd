@@ -3000,127 +3000,160 @@ func (r *rpcServer) ListPeers(ctx context.Context,
 	}
 
 	for _, serverPeer := range serverPeers {
-		var (
-			satSent int64
-			satRecv int64
-		)
-
-		// In order to display the total number of satoshis of outbound
-		// (sent) and inbound (recv'd) satoshis that have been
-		// transported through this peer, we'll sum up the sent/recv'd
-		// values for each of the active channels we have with the
-		// peer.
-		chans := serverPeer.ChannelSnapshots()
-		for _, c := range chans {
-			satSent += int64(c.TotalMSatSent.ToSatoshis())
-			satRecv += int64(c.TotalMSatReceived.ToSatoshis())
+		rpcPeer, err := r.mapPeer(serverPeer, in.LatestError)
+		if err != nil {
+			return nil, err
 		}
-
-		nodePub := serverPeer.PubKey()
-
-		// Retrieve the peer's sync type. If we don't currently have a
-		// syncer for the peer, then we'll default to a passive sync.
-		// This can happen if the RPC is called while a peer is
-		// initializing.
-		syncer, ok := r.server.authGossiper.SyncManager().GossipSyncer(
-			nodePub,
-		)
-
-		var lnrpcSyncType lnrpc.Peer_SyncType
-		if !ok {
-			rpcsLog.Warnf("Gossip syncer for peer=%x not found",
-				nodePub)
-			lnrpcSyncType = lnrpc.Peer_UNKNOWN_SYNC
-		} else {
-			syncType := syncer.SyncType()
-			switch syncType {
-			case discovery.ActiveSync:
-				lnrpcSyncType = lnrpc.Peer_ACTIVE_SYNC
-			case discovery.PassiveSync:
-				lnrpcSyncType = lnrpc.Peer_PASSIVE_SYNC
-			case discovery.PinnedSync:
-				lnrpcSyncType = lnrpc.Peer_PINNED_SYNC
-			default:
-				return nil, fmt.Errorf("unhandled sync type %v",
-					syncType)
-			}
-		}
-
-		features := invoicesrpc.CreateRPCFeatures(
-			serverPeer.RemoteFeatures(),
-		)
-
-		rpcPeer := &lnrpc.Peer{
-			PubKey:          hex.EncodeToString(nodePub[:]),
-			Address:         serverPeer.Conn().RemoteAddr().String(),
-			Inbound:         serverPeer.Inbound(),
-			BytesRecv:       serverPeer.BytesReceived(),
-			BytesSent:       serverPeer.BytesSent(),
-			SatSent:         satSent,
-			SatRecv:         satRecv,
-			PingTime:        serverPeer.PingTime(),
-			SyncType:        lnrpcSyncType,
-			Features:        features,
-			LastPingPayload: serverPeer.LastRemotePingPayload(),
-		}
-
-		var peerErrors []interface{}
-
-		// If we only want the most recent error, get the most recent
-		// error from the buffer and add it to our list of errors if
-		// it is non-nil. If we want all the stored errors, simply
-		// add the full list to our set of errors.
-		if in.LatestError {
-			latestErr := serverPeer.ErrorBuffer().Latest()
-			if latestErr != nil {
-				peerErrors = []interface{}{latestErr}
-			}
-		} else {
-			peerErrors = serverPeer.ErrorBuffer().List()
-		}
-
-		// Add the relevant peer errors to our response.
-		for _, error := range peerErrors {
-			tsError := error.(*peer.TimestampedError)
-
-			rpcErr := &lnrpc.TimestampedError{
-				Timestamp: uint64(tsError.Timestamp.Unix()),
-				Error:     tsError.Error.Error(),
-			}
-
-			rpcPeer.Errors = append(rpcPeer.Errors, rpcErr)
-		}
-
-		// If the server has started, we can query the event store
-		// for our peer's flap count. If we do so when the server has
-		// not started, the request will block.
-		if r.server.Started() {
-			vertex, err := route.NewVertexFromBytes(nodePub[:])
-			if err != nil {
-				return nil, err
-			}
-
-			flap, ts, err := r.server.chanEventStore.FlapCount(
-				vertex,
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			// If our timestamp is non-nil, we have values for our
-			// peer's flap count, so we set them.
-			if ts != nil {
-				rpcPeer.FlapCount = int32(flap)
-				rpcPeer.LastFlapNs = ts.UnixNano()
-			}
-		}
-
 		resp.Peers = append(resp.Peers, rpcPeer)
 	}
 
 	rpcsLog.Debugf("[listpeers] yielded %v peers", serverPeers)
 
 	return resp, nil
+}
+
+// GetPeer returns information about the requested peer if the peer is
+// connected.
+func (r *rpcServer) GetPeer(ctx context.Context,
+	in *lnrpc.GetPeerRequest) (*lnrpc.GetPeerResponse, error) {
+
+	resp := &lnrpc.GetPeerResponse{}
+	serverPeer := r.server.Peer(in.Pubkey)
+	if serverPeer == nil {
+		return resp, nil
+	}
+
+	rpcPeer, err := r.mapPeer(serverPeer, in.LatestError)
+	if err != nil {
+		return nil, err
+	}
+	resp.Peer = rpcPeer
+
+	rpcsLog.Debugf("[getpeer] yielded peer %v", rpcPeer)
+
+	return resp, nil
+}
+
+// mapPeer maps a Brontide to an rpc peer for the ListPeers and GetPeer calls.
+func (r *rpcServer) mapPeer(serverPeer *peer.Brontide,
+	latestError bool) (*lnrpc.Peer, error) {
+
+	var (
+		satSent int64
+		satRecv int64
+	)
+
+	// In order to display the total number of satoshis of outbound
+	// (sent) and inbound (recv'd) satoshis that have been
+	// transported through this peer, we'll sum up the sent/recv'd
+	// values for each of the active channels we have with the
+	// peer.
+	chans := serverPeer.ChannelSnapshots()
+	for _, c := range chans {
+		satSent += int64(c.TotalMSatSent.ToSatoshis())
+		satRecv += int64(c.TotalMSatReceived.ToSatoshis())
+	}
+
+	nodePub := serverPeer.PubKey()
+
+	// Retrieve the peer's sync type. If we don't currently have a
+	// syncer for the peer, then we'll default to a passive sync.
+	// This can happen if the RPC is called while a peer is
+	// initializing.
+	syncer, ok := r.server.authGossiper.SyncManager().GossipSyncer(
+		nodePub,
+	)
+
+	var lnrpcSyncType lnrpc.Peer_SyncType
+	if !ok {
+		rpcsLog.Warnf("Gossip syncer for peer=%x not found",
+			nodePub)
+		lnrpcSyncType = lnrpc.Peer_UNKNOWN_SYNC
+	} else {
+		syncType := syncer.SyncType()
+		switch syncType {
+		case discovery.ActiveSync:
+			lnrpcSyncType = lnrpc.Peer_ACTIVE_SYNC
+		case discovery.PassiveSync:
+			lnrpcSyncType = lnrpc.Peer_PASSIVE_SYNC
+		case discovery.PinnedSync:
+			lnrpcSyncType = lnrpc.Peer_PINNED_SYNC
+		default:
+			return nil, fmt.Errorf("unhandled sync type %v",
+				syncType)
+		}
+	}
+
+	features := invoicesrpc.CreateRPCFeatures(
+		serverPeer.RemoteFeatures(),
+	)
+
+	rpcPeer := &lnrpc.Peer{
+		PubKey:          hex.EncodeToString(nodePub[:]),
+		Address:         serverPeer.Conn().RemoteAddr().String(),
+		Inbound:         serverPeer.Inbound(),
+		BytesRecv:       serverPeer.BytesReceived(),
+		BytesSent:       serverPeer.BytesSent(),
+		SatSent:         satSent,
+		SatRecv:         satRecv,
+		PingTime:        serverPeer.PingTime(),
+		SyncType:        lnrpcSyncType,
+		Features:        features,
+		LastPingPayload: serverPeer.LastRemotePingPayload(),
+	}
+
+	var peerErrors []interface{}
+
+	// If we only want the most recent error, get the most recent
+	// error from the buffer and add it to our list of errors if
+	// it is non-nil. If we want all the stored errors, simply
+	// add the full list to our set of errors.
+	if latestError {
+		latestErr := serverPeer.ErrorBuffer().Latest()
+		if latestErr != nil {
+			peerErrors = []interface{}{latestErr}
+		}
+	} else {
+		peerErrors = serverPeer.ErrorBuffer().List()
+	}
+
+	// Add the relevant peer errors to our response.
+	for _, error := range peerErrors {
+		tsError := error.(*peer.TimestampedError)
+
+		rpcErr := &lnrpc.TimestampedError{
+			Timestamp: uint64(tsError.Timestamp.Unix()),
+			Error:     tsError.Error.Error(),
+		}
+
+		rpcPeer.Errors = append(rpcPeer.Errors, rpcErr)
+	}
+
+	// If the server has started, we can query the event store
+	// for our peer's flap count. If we do so when the server has
+	// not started, the request will block.
+	if r.server.Started() {
+		vertex, err := route.NewVertexFromBytes(nodePub[:])
+		if err != nil {
+			return nil, err
+		}
+
+		flap, ts, err := r.server.chanEventStore.FlapCount(
+			vertex,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// If our timestamp is non-nil, we have values for our
+		// peer's flap count, so we set them.
+		if ts != nil {
+			rpcPeer.FlapCount = int32(flap)
+			rpcPeer.LastFlapNs = ts.UnixNano()
+		}
+	}
+
+	return rpcPeer, nil
 }
 
 // SubscribePeerEvents returns a uni-directional stream (server -> client)

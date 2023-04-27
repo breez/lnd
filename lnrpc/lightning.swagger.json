@@ -4793,6 +4793,15 @@
         }
       }
     },
+    "lnrpcGetPeerResponse": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "$ref": "#/definitions/lnrpcPeer",
+          "description": "Optional peer if the requested peer is connected."
+        }
+      }
+    },
     "lnrpcGetRecoveryInfoResponse": {
       "type": "object",
       "properties": {

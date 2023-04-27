@@ -91,6 +91,9 @@ type LightningClient interface {
 	// lncli: `listpeers`
 	// ListPeers returns a verbose listing of all currently active peers.
 	ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, error)
+	// GetPeer returns information about the requested peer if the peer is
+	// connected.
+	GetPeer(ctx context.Context, in *GetPeerRequest, opts ...grpc.CallOption) (*GetPeerResponse, error)
 	// SubscribePeerEvents creates a uni-directional stream from the server to
 	// the client in which any events relevant to the state of peers are sent
 	// over. Events include peers going online and offline.
@@ -559,6 +562,15 @@ func (c *lightningClient) DisconnectPeer(ctx context.Context, in *DisconnectPeer
 func (c *lightningClient) ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, error) {
 	out := new(ListPeersResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListPeers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) GetPeer(ctx context.Context, in *GetPeerRequest, opts ...grpc.CallOption) (*GetPeerResponse, error) {
+	out := new(GetPeerResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetPeer", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1393,6 +1405,9 @@ type LightningServer interface {
 	// lncli: `listpeers`
 	// ListPeers returns a verbose listing of all currently active peers.
 	ListPeers(context.Context, *ListPeersRequest) (*ListPeersResponse, error)
+	// GetPeer returns information about the requested peer if the peer is
+	// connected.
+	GetPeer(context.Context, *GetPeerRequest) (*GetPeerResponse, error)
 	// SubscribePeerEvents creates a uni-directional stream from the server to
 	// the client in which any events relevant to the state of peers are sent
 	// over. Events include peers going online and offline.
@@ -1756,6 +1771,9 @@ func (UnimplementedLightningServer) DisconnectPeer(context.Context, *DisconnectP
 }
 func (UnimplementedLightningServer) ListPeers(context.Context, *ListPeersRequest) (*ListPeersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
+}
+func (UnimplementedLightningServer) GetPeer(context.Context, *GetPeerRequest) (*GetPeerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeer not implemented")
 }
 func (UnimplementedLightningServer) SubscribePeerEvents(*PeerEventSubscription, Lightning_SubscribePeerEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribePeerEvents not implemented")
@@ -2180,6 +2198,24 @@ func _Lightning_ListPeers_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListPeers(ctx, req.(*ListPeersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_GetPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).GetPeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/GetPeer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).GetPeer(ctx, req.(*GetPeerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3252,6 +3288,10 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPeers",
 			Handler:    _Lightning_ListPeers_Handler,
+		},
+		{
+			MethodName: "GetPeer",
+			Handler:    _Lightning_GetPeer_Handler,
 		},
 		{
 			MethodName: "GetInfo",

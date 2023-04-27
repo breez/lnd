@@ -128,6 +128,12 @@ service Lightning {
     rpc ListPeers (ListPeersRequest) returns (ListPeersResponse);
 
     /*
+    GetPeer returns information about the requested peer if the peer is
+    connected.
+    */
+    rpc GetPeer (GetPeerRequest) returns (GetPeerResponse);
+
+    /*
     SubscribePeerEvents creates a uni-directional stream from the server to
     the client in which any events relevant to the state of peers are sent
     over. Events include peers going online and offline.
@@ -1845,6 +1851,22 @@ message ListPeersRequest {
 message ListPeersResponse {
     // The list of currently connected peers
     repeated Peer peers = 1;
+}
+
+message GetPeerRequest {
+    // The pubkey of the peer to look up.
+    string pubkey = 1;
+
+    /*
+    If true, only the last error that our peer sent us will be returned with
+    the peer's information, rather than the full set of historic errors we have
+    stored.
+    */
+    bool latest_error = 2;
+}
+message GetPeerResponse {
+    // Optional peer if the requested peer is connected.
+    Peer peer = 1;
 }
 
 message PeerEventSubscription {
