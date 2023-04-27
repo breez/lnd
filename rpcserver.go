@@ -4132,6 +4132,25 @@ func (r *rpcServer) ListChannels(ctx context.Context,
 	return resp, nil
 }
 
+// GetPeerIdByScid gets the pubkey of the remote peer if there is a channel
+// with the specified scid or scid alias.
+func (r *rpcServer) GetPeerIdByScid(
+	ctx context.Context,
+	in *lnrpc.GetPeerIdByScidRequest,
+) (*lnrpc.GetPeerIdByScidResponse, error) {
+
+	scid := lnwire.NewShortChanIDFromInt(in.Scid)
+	link, err := r.server.htlcSwitch.GetLinkByShortID(scid)
+	if err != nil {
+		return nil, err
+	}
+
+	peerId := link.Peer().PubKey()
+	return &lnrpc.GetPeerIdByScidResponse{
+		PeerId: hex.EncodeToString(peerId[:]),
+	}, nil
+}
+
 // rpcCommitmentType takes the channel type and converts it to an rpc commitment
 // type value.
 func rpcCommitmentType(chanType channeldb.ChannelType) lnrpc.CommitmentType {

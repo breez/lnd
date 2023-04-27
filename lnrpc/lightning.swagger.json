@@ -4793,6 +4793,14 @@
         }
       }
     },
+    "lnrpcGetPeerIdByScidResponse": {
+      "type": "object",
+      "properties": {
+        "peer_id": {
+          "type": "string"
+        }
+      }
+    },
     "lnrpcGetPeerResponse": {
       "type": "object",
       "properties": {

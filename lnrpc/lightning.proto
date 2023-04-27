@@ -134,6 +134,13 @@ service Lightning {
     rpc GetPeer (GetPeerRequest) returns (GetPeerResponse);
 
     /*
+    GetPeerIdByScid returns the peer's pubkey if a channel with the given scid
+    or scid alias exists.
+    */
+    rpc GetPeerIdByScid (GetPeerIdByScidRequest)
+        returns (GetPeerIdByScidResponse);
+
+    /*
     SubscribePeerEvents creates a uni-directional stream from the server to
     the client in which any events relevant to the state of peers are sent
     over. Events include peers going online and offline.
@@ -170,7 +177,6 @@ service Lightning {
     is a participant in.
     */
     rpc ListChannels (ListChannelsRequest) returns (ListChannelsResponse);
-
     /*
     SubscribeChannelEvents creates a uni-directional stream from the server to
     the client in which any updates relevant to the state of the channels are
@@ -1867,6 +1873,13 @@ message GetPeerRequest {
 message GetPeerResponse {
     // Optional peer if the requested peer is connected.
     Peer peer = 1;
+}
+
+message GetPeerIdByScidRequest {
+    uint64 scid = 1;
+}
+message GetPeerIdByScidResponse {
+    string peer_id = 1;
 }
 
 message PeerEventSubscription {
