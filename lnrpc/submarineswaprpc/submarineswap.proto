@@ -55,9 +55,11 @@ message UnspentAmountResponse {
 message SubSwapServiceRedeemFeesRequest {
     /// The hash (to be used by a swapper service)
     bytes hash = 1 [json_name = "hash"];
-    /// The target number of blocks that the funding transaction should be confirmed by.
+    /// The target number of blocks that the funding transaction should be
+    /// confirmed by.
     int32 target_conf = 2;
-    /// A manual fee rate set in sat/byte that should be used when crafting the funding transaction.
+    /// A manual fee rate set in sat/byte that should be used when crafting the
+    /// funding transaction.
     int64 sat_per_byte = 3;
 }
 message SubSwapServiceRedeemFeesResponse {
@@ -67,10 +69,12 @@ message SubSwapServiceRedeemFeesResponse {
 message SubSwapServiceRedeemRequest {
     bytes preimage = 1 [json_name = "preimage"];
 
-    /// The target number of blocks that the funding transaction should be confirmed by.
+    /// The target number of blocks that the funding transaction should be
+    /// confirmed by.
     int32 target_conf = 2;
 
-    /// A manual fee rate set in sat/byte that should be used when crafting the funding transaction.
+    /// A manual fee rate set in sat/byte that should be used when crafting the
+    /// funding transaction.
     int64 sat_per_byte = 3;
 }
 message SubSwapServiceRedeemResponse {
@@ -85,10 +89,12 @@ message SubSwapClientRefundRequest {
     /// The address to receive the refund.
     string refundAddress = 2 [json_name = "refund_address"];
 
-    /// The target number of blocks that the funding transaction should be confirmed by.
+    /// The target number of blocks that the funding transaction should be
+    /// confirmed by.
     int32 target_conf = 3;
 
-    /// A manual fee rate set in sat/byte that should be used when crafting the funding transaction.
+    /// A manual fee rate set in sat/byte that should be used when crafting the
+    /// funding transaction.
     int64 sat_per_byte = 4;
 }
 message SubSwapClientRefundResponse {
@@ -100,23 +106,26 @@ message SubSwapClientRefundResponse {
 }
 
 service SubmarineSwapper {
-
-    rpc SubSwapClientInit (SubSwapClientInitRequest) returns (SubSwapClientInitResponse) {
+    rpc SubSwapClientInit (SubSwapClientInitRequest)
+        returns (SubSwapClientInitResponse) {
     }
 
     /**
-    */
-    rpc SubSwapServiceInit (SubSwapServiceInitRequest) returns (SubSwapServiceInitResponse) {
+     */
+    rpc SubSwapServiceInit (SubSwapServiceInitRequest)
+        returns (SubSwapServiceInitResponse) {
     }
 
     /**
-    */
-    rpc SubSwapClientWatch (SubSwapClientWatchRequest) returns (SubSwapClientWatchResponse) {
+     */
+    rpc SubSwapClientWatch (SubSwapClientWatchRequest)
+        returns (SubSwapClientWatchResponse) {
     }
 
     /**
-    UnspentAmount returns the total amount of the btc received in a watched address,
-    the block height and the age of the first transaction sending btc to the address.
+    UnspentAmount returns the total amount of the btc received in a watched
+    address, the block height and the age of the first transaction sending btc
+    to the address.
     */
     rpc UnspentAmount (UnspentAmountRequest) returns (UnspentAmountResponse) {
     }
@@ -124,19 +133,22 @@ service SubmarineSwapper {
     /**
     SubSwapServiceFeesRedeem returns the fees to redeem the amount received.
     */
-    rpc SubSwapServiceRedeemFees (SubSwapServiceRedeemFeesRequest) returns (SubSwapServiceRedeemFeesResponse) {
+    rpc SubSwapServiceRedeemFees (SubSwapServiceRedeemFeesRequest)
+        returns (SubSwapServiceRedeemFeesResponse) {
     }
 
     /**
-    SubSwapServiceRedeem redeems the amount received to a new address of the internal wallet.
+    SubSwapServiceRedeem redeems the amount received to a new address of the
+    internal wallet.
     */
-    rpc SubSwapServiceRedeem (SubSwapServiceRedeemRequest) returns (SubSwapServiceRedeemResponse) {
+    rpc SubSwapServiceRedeem (SubSwapServiceRedeemRequest)
+        returns (SubSwapServiceRedeemResponse) {
     }
 
     /**
     SubSwapClientRefund refunds the amount received to a an external address.
     */
-    rpc SubSwapClientRefund (SubSwapClientRefundRequest) returns (SubSwapClientRefundResponse) {
+    rpc SubSwapClientRefund (SubSwapClientRefundRequest)
+        returns (SubSwapClientRefundResponse) {
     }
-
 }
