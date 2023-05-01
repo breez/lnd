@@ -93,6 +93,12 @@ type LightningClient interface {
 	// lncli: `listpeers`
 	// ListPeers returns a verbose listing of all currently active peers.
 	ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, error)
+	// GetPeerConnected returns a value indicating whether the peer with the
+	// requested pubkey is connected.
+	GetPeerConnected(ctx context.Context, in *GetPeerConnectedRequest, opts ...grpc.CallOption) (*GetPeerConnectedResponse, error)
+	// GetPeerIdByScid returns the peer's pubkey if a channel with the given scid
+	// or scid alias exists.
+	GetPeerIdByScid(ctx context.Context, in *GetPeerIdByScidRequest, opts ...grpc.CallOption) (*GetPeerIdByScidResponse, error)
 	// SubscribePeerEvents creates a uni-directional stream from the server to
 	// the client in which any events relevant to the state of peers are sent
 	// over. Events include peers going online and offline.
@@ -569,6 +575,24 @@ func (c *lightningClient) DisconnectPeer(ctx context.Context, in *DisconnectPeer
 func (c *lightningClient) ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, error) {
 	out := new(ListPeersResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListPeers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) GetPeerConnected(ctx context.Context, in *GetPeerConnectedRequest, opts ...grpc.CallOption) (*GetPeerConnectedResponse, error) {
+	out := new(GetPeerConnectedResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetPeerConnected", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) GetPeerIdByScid(ctx context.Context, in *GetPeerIdByScidRequest, opts ...grpc.CallOption) (*GetPeerIdByScidResponse, error) {
+	out := new(GetPeerIdByScidResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/GetPeerIdByScid", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1414,6 +1438,12 @@ type LightningServer interface {
 	// lncli: `listpeers`
 	// ListPeers returns a verbose listing of all currently active peers.
 	ListPeers(context.Context, *ListPeersRequest) (*ListPeersResponse, error)
+	// GetPeerConnected returns a value indicating whether the peer with the
+	// requested pubkey is connected.
+	GetPeerConnected(context.Context, *GetPeerConnectedRequest) (*GetPeerConnectedResponse, error)
+	// GetPeerIdByScid returns the peer's pubkey if a channel with the given scid
+	// or scid alias exists.
+	GetPeerIdByScid(context.Context, *GetPeerIdByScidRequest) (*GetPeerIdByScidResponse, error)
 	// SubscribePeerEvents creates a uni-directional stream from the server to
 	// the client in which any events relevant to the state of peers are sent
 	// over. Events include peers going online and offline.
@@ -1785,6 +1815,12 @@ func (UnimplementedLightningServer) DisconnectPeer(context.Context, *DisconnectP
 }
 func (UnimplementedLightningServer) ListPeers(context.Context, *ListPeersRequest) (*ListPeersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
+}
+func (UnimplementedLightningServer) GetPeerConnected(context.Context, *GetPeerConnectedRequest) (*GetPeerConnectedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeerConnected not implemented")
+}
+func (UnimplementedLightningServer) GetPeerIdByScid(context.Context, *GetPeerIdByScidRequest) (*GetPeerIdByScidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeerIdByScid not implemented")
 }
 func (UnimplementedLightningServer) SubscribePeerEvents(*PeerEventSubscription, Lightning_SubscribePeerEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribePeerEvents not implemented")
@@ -2212,6 +2248,42 @@ func _Lightning_ListPeers_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).ListPeers(ctx, req.(*ListPeersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_GetPeerConnected_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPeerConnectedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).GetPeerConnected(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/GetPeerConnected",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).GetPeerConnected(ctx, req.(*GetPeerConnectedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_GetPeerIdByScid_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPeerIdByScidRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).GetPeerIdByScid(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/GetPeerIdByScid",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).GetPeerIdByScid(ctx, req.(*GetPeerIdByScidRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3302,6 +3374,14 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPeers",
 			Handler:    _Lightning_ListPeers_Handler,
+		},
+		{
+			MethodName: "GetPeerConnected",
+			Handler:    _Lightning_GetPeerConnected_Handler,
+		},
+		{
+			MethodName: "GetPeerIdByScid",
+			Handler:    _Lightning_GetPeerIdByScid_Handler,
 		},
 		{
 			MethodName: "GetInfo",
