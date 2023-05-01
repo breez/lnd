@@ -4815,6 +4815,17 @@ func (s *server) OpenChannel(
 	return req.Updates, req.Err
 }
 
+// Peers returns the peer with the given pubkey, or nil if the pubkey is not
+// connected.
+//
+// NOTE: This function is safe for concurrent access.
+func (s *server) Peer(pubkey []byte) *peer.Brontide {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.peersByPub[string(pubkey)]
+}
+
 // Peers returns a slice of all active peers.
 //
 // NOTE: This function is safe for concurrent access.
