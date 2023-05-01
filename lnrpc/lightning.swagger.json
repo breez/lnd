@@ -5112,6 +5112,23 @@
         }
       }
     },
+    "lnrpcGetPeerConnectedResponse": {
+      "type": "object",
+      "properties": {
+        "connected": {
+          "type": "boolean",
+          "description": "Value indicating whether the peer with the requested pubkey is currently\nconnected."
+        }
+      }
+    },
+    "lnrpcGetPeerIdByScidResponse": {
+      "type": "object",
+      "properties": {
+        "peer_id": {
+          "type": "string"
+        }
+      }
+    },
     "lnrpcGetRecoveryInfoResponse": {
       "type": "object",
       "properties": {

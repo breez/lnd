@@ -366,6 +366,14 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "peers",
 			Action: "read",
 		}},
+		"/lnrpc.Lightning/GetPeerConnected": {{
+			Entity: "offchain",
+			Action: "read",
+		}},
+		"/lnrpc.Lightning/GetPeerIdByScid": {{
+			Entity: "offchain",
+			Action: "read",
+		}},
 		"/lnrpc.Lightning/WalletBalance": {{
 			Entity: "onchain",
 			Action: "read",
@@ -3337,6 +3345,64 @@ func (r *rpcServer) ListPeers(ctx context.Context,
 	rpcsLog.Debugf("[listpeers] yielded %v peers", serverPeers)
 
 	return resp, nil
+}
+
+// GetPeerConnected returns a value indicating whether the peer with the
+// requested pubkey is connected.
+func (r *rpcServer) GetPeerConnected(
+	ctx context.Context,
+	in *lnrpc.GetPeerConnectedRequest,
+) (*lnrpc.GetPeerConnectedResponse, error) {
+
+	pubkey, err := hex.DecodeString(in.Pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode pubkey")
+	}
+	serverPeer := r.server.Peer(pubkey)
+	connected := serverPeer != nil
+
+	rpcsLog.Debugf("[getpeerconnected] yielded %t for pubkey %s",
+		connected, in.Pubkey)
+
+	return &lnrpc.GetPeerConnectedResponse{
+		Connected: connected,
+	}, nil
+}
+
+// GetPeerIdByScid gets the pubkey of the remote peer if there is a channel
+// with the specified scid or scid alias.
+func (r *rpcServer) GetPeerIdByScid(
+	ctx context.Context,
+	in *lnrpc.GetPeerIdByScidRequest,
+) (*lnrpc.GetPeerIdByScidResponse, error) {
+
+	aliasMgr := r.server.aliasMgr
+	scid := lnwire.NewShortChanIDFromInt(in.Scid)
+	base, err := aliasMgr.FindBaseSCID(scid)
+	if err != nil {
+		base = scid
+	}
+
+	graphDB := r.server.graphDB
+	edgeInfo, _, _, err := graphDB.FetchChannelEdgesByID(
+		base.ToUint64(),
+	)
+	if err == channeldb.ErrGraphNoEdgesFound ||
+		err == channeldb.ErrEdgeNotFound {
+		return &lnrpc.GetPeerIdByScidResponse{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	peerId, err := edgeInfo.OtherNodeKeyBytes(r.selfNode[:])
+	if err != nil {
+		return &lnrpc.GetPeerIdByScidResponse{}, nil
+	}
+
+	return &lnrpc.GetPeerIdByScidResponse{
+		PeerId: hex.EncodeToString(peerId[:]),
+	}, nil
 }
 
 // SubscribePeerEvents returns a uni-directional stream (server -> client)
