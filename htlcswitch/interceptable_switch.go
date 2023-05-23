@@ -123,9 +123,9 @@ type FwdResolution struct {
 	OutgoingChanID lnwire.ShortChannelID
 	OnionBlob      [lnwire.OnionPacketSize]byte
 
-	// FailureMessage is the encrypted failure message that is to be passed
-	// back to the sender if action is FwdActionFail.
-	FailureMessage []byte
+	// EncryptedFailureMessage is the encrypted failure message that is to
+	// be passed back to the sender if action is FwdActionFail.
+	EncryptedFailureMessage []byte
 
 	// FailureCode is the failure code that is to be passed back to the
 	// sender if action is FwdActionFail.
@@ -384,8 +384,8 @@ func (s *InterceptableSwitch) resolve(res *FwdResolution) error {
 		return intercepted.Settle(res.Preimage)
 
 	case FwdActionFail:
-		if len(res.FailureMessage) > 0 {
-			return intercepted.Fail(res.FailureMessage)
+		if len(res.EncryptedFailureMessage) > 0 {
+			return intercepted.Fail(res.EncryptedFailureMessage)
 		}
 
 		return intercepted.FailWithCode(res.FailureCode)
