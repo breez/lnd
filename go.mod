@@ -9,7 +9,7 @@ require (
 	github.com/btcsuite/btcd/btcutil/psbt v1.1.8
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
-	github.com/btcsuite/btcwallet v0.16.9
+	github.com/btcsuite/btcwallet v0.16.10-0.20230621165747-9c21f464ce13
 	github.com/btcsuite/btcwallet/wallet/txauthor v1.3.2
 	github.com/btcsuite/btcwallet/wallet/txrules v1.2.0
 	github.com/btcsuite/btcwallet/walletdb v1.4.0
@@ -184,7 +184,7 @@ replace github.com/ulikunitz/xz => github.com/ulikunitz/xz v0.5.8
 replace github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 
 //
-replace github.com/btcsuite/btcwallet => github.com/breez/btcwallet v0.16.10-0.20230430131931-8e33b2ab8262
+replace github.com/btcsuite/btcwallet => github.com/breez/btcwallet v0.16.10-0.20230713043007-40353f733a0b
 
 // If you change this please also update .github/pull_request_template.md and
 // docs/INSTALL.md.

@@ -61,8 +61,8 @@ github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
-github.com/breez/btcwallet v0.16.10-0.20230430131931-8e33b2ab8262 h1:3NoNwHo8BhDpB8VKaKrEyHwAE5jrpA1t/+BOGIojVb8=
-github.com/breez/btcwallet v0.16.10-0.20230430131931-8e33b2ab8262/go.mod h1:T3DjEAMZYIqQ28l+ixlB6DX4mFJXCX8Pzz+yACQcLsc=
+github.com/breez/btcwallet v0.16.10-0.20230713043007-40353f733a0b h1:bVfiC+jw1I+ebT6qDwTJnf9gM9ofZMAvdTQL9uSQyGM=
+github.com/breez/btcwallet v0.16.10-0.20230713043007-40353f733a0b/go.mod h1:Hl4PP/tSNcgN6himfx/020mYSa19a1qkqTuqQBUU97w=
 github.com/btcsuite/btcd v0.20.1-beta/go.mod h1:wVuoA8VJLEcwgqHBwHmzLRazpKxTv13Px/pDuV7OomQ=
 github.com/btcsuite/btcd v0.22.0-beta.0.20220111032746-97732e52810c/go.mod h1:tjmYdS6MLJ5/s0Fj4DbLgSbDHbEqLJrtnHecBFkdz5M=
 github.com/btcsuite/btcd v0.22.0-beta.0.20220204213055-eaf0459ff879/go.mod h1:osu7EoKiL36UThEgzYPqdRaxeo0NU8VoXqgcnwpey0g=
