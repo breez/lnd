@@ -309,7 +309,8 @@ func (c *ChannelGraph) getChannelMap(edges kvdb.RBucket) (
 
 		// Validate key length.
 		if len(k) != 33+8 {
-			return fmt.Errorf("invalid edge key %x encountered", k)
+			log.Warnf("invalid edge key %x encountered", k)
+			return nil
 		}
 
 		var key channelMapKey
