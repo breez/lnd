@@ -26,7 +26,8 @@ type Sweeper struct {
 
 	NoDeadlineConfTarget uint32 `long:"nodeadlineconftarget" description:"The conf target to use when sweeping non-time-sensitive outputs. This is useful for sweeping outputs that are not time-sensitive, and can be swept at a lower fee rate."`
 
-	Budget *contractcourt.BudgetConfig `group:"sweeper.budget" namespace:"budget" long:"budget" description:"An optional config group that's used for the automatic sweep fee estimation. The Budget config gives options to limits ones fee exposure when sweeping unilateral close outputs and the fee rate calculated from budgets is capped at sweeper.maxfeerate. Check the budget config options for more details."`
+	Budget                  *contractcourt.BudgetConfig `group:"sweeper.budget" namespace:"budget" long:"budget" description:"An optional config group that's used for the automatic sweep fee estimation. The Budget config gives options to limits ones fee exposure when sweeping unilateral close outputs and the fee rate calculated from budgets is capped at sweeper.maxfeerate. Check the budget config options for more details."`
+	NotRecoverAnchorOutputs bool                        `long:"notrecoveranchoroutputs" description:"Not recovering anchor outputs when they were not used to bump their commitment transaction."`
 }
 
 // Validate checks the values configured for the sweeper.
