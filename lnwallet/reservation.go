@@ -625,7 +625,7 @@ func (r *ChannelReservation) validateReserveBounds() bool {
 		maxDustLimit = theirDustLimit
 	}
 
-	if theirDustLimit == 0 && theirRequiredReserve == 0 {
+	if theirRequiredReserve == 0 {
 		minChanReserve = ourRequiredReserve
 		maxDustLimit = ourDustLimit
 	}
