@@ -1470,7 +1470,7 @@ func (l *LightningWallet) handleContributionMsg(req *addContributionMsg) {
 
 	// Perform bounds-checking on both ChannelReserve and DustLimit
 	// parameters.
-	walletLog.Infof("BBBBBB reserve and dust bounds: our contribution: %+v, their contribution: %+v", pendingReservation.ourContribution, pendingReservation.theirContribution)
+	walletLog.Infof("BBBBBB reserve and dust bounds: {our contribution: %+v, dustlimit: %v, chan reserve: %v}, {their contribution: %+v, dustlimit: %v, chan reserve: %v}", pendingReservation.ourContribution, pendingReservation.theirContribution)
 	if !pendingReservation.validateReserveBounds() {
 		req.err <- fmt.Errorf("invalid reserve and dust bounds")
 		return
@@ -1804,7 +1804,7 @@ func (l *LightningWallet) handleSingleContribution(req *addSingleContributionMsg
 	// Perform bounds checking on both ChannelReserve and DustLimit
 	// parameters. The ChannelReserve may have been changed by the
 	// ChannelAcceptor RPC, so this is necessary.
-	walletLog.Infof("AAAAAA reserve and dust bounds: our contribution: %+v, their contribution: %+v", pendingReservation.ourContribution, pendingReservation.theirContribution)
+	walletLog.Infof("AAAAAA reserve and dust bounds: {our contribution: %+v, dustlimit: %v, chan reserve: %v}, {their contribution: %+v, dustlimit: %v, chan reserve: %v}", pendingReservation.ourContribution, pendingReservation.theirContribution)
 	if !pendingReservation.validateReserveBounds() {
 		req.err <- fmt.Errorf("invalid reserve and dust bounds")
 		return
