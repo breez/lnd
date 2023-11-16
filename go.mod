@@ -53,6 +53,7 @@ require (
 	github.com/urfave/cli v1.22.9
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v3 v3.5.7
+	go.starlark.net v0.0.0-20231101134539-556fd59b42f6
 	golang.org/x/crypto v0.7.0
 	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028
