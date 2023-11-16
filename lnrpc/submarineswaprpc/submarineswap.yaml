@@ -1,0 +1,26 @@
+type: google.api.Service
+config_version: 3
+
+http:
+  rules:
+    - selector: submarineswaprpc.SubmarineSwapper.SubSwapClientInit
+      post: "/v2/submarineswapper/clientinit"
+      body: "*"
+    - selector: submarineswaprpc.SubmarineSwapper.SubSwapServiceInit
+      post: "/v2/submarineswapper/serviceinit"
+      body: "*"
+    - selector: submarineswaprpc.SubmarineSwapper.SubSwapClientWatch
+      post: "/v2/submarineswapper/clientwatch"
+      body: "*"
+    - selector: submarineswaprpc.SubmarineSwapper.UnspentAmount
+      post: "/v2/submarineswapper/unspentamount"
+      body: "*"
+    - selector: submarineswaprpc.SubmarineSwapper.SubSwapServiceRedeemFees
+      post: "/v2/submarineswapper/redeemfees"
+      body: "*"
+    - selector: submarineswaprpc.SubmarineSwapper.SubSwapServiceRedeem
+      post: "/v2/submarineswapper/redeem"
+      body: "*"
+    - selector: submarineswaprpc.SubmarineSwapper.SubSwapClientRefund
+      post: "/v2/submarineswapper/refund"
+      body: "*"
