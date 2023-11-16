@@ -1076,6 +1076,16 @@ message ForwardHtlcInterceptResponse {
     // replacing any conflicting types. Note that there currently is no support
     // for deleting existing custom records (they can only be replaced).
     map<uint64, bytes> out_wire_custom_records = 8;
+
+    uint64 outgoing_amount_msat = 9;
+
+    // The requested outgoing channel id for this forwarded htlc. Because of
+    // non-strict forwarding, this isn't necessarily the channel over which the
+    // packet will be forwarded eventually. A different channel to the same peer
+    // may be selected as well.
+    uint64 outgoing_requested_chan_id = 10;
+
+    bytes onion_blob = 11;
 }
 
 enum ResolveHoldForwardAction {
