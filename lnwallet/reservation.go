@@ -555,6 +555,11 @@ func (r *ChannelReservation) validateReserveBounds() bool {
 		maxDustLimit = theirDustLimit
 	}
 
+	if theirDustLimit == 0 && theirRequiredReserve == 0 {
+		minChanReserve = ourRequiredReserve
+		maxDustLimit = ourDustLimit
+	}
+
 	return minChanReserve >= maxDustLimit
 }
 
@@ -832,7 +837,7 @@ func VerifyConstraints(bounds *channeldb.ChannelStateBounds,
 	// Validate against the maximum-sized witness script dust limit, and
 	// also ensure that the DustLimit is not too large.
 	maxWitnessLimit := DustLimitForSize(input.UnknownWitnessSize)
-	if commitParams.DustLimit < maxWitnessLimit ||
+	if (commitParams.DustLimit > 0 && commitParams.DustLimit < maxWitnessLimit) ||
 		commitParams.DustLimit > 3*maxWitnessLimit {
 
 		return ErrInvalidDustLimit(commitParams.DustLimit)
