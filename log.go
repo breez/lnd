@@ -56,6 +56,7 @@ import (
 	"github.com/lightningnetwork/lnd/rpcperms"
 	"github.com/lightningnetwork/lnd/signal"
 	"github.com/lightningnetwork/lnd/sqldb"
+	"github.com/lightningnetwork/lnd/submarineswap"
 	"github.com/lightningnetwork/lnd/sweep"
 	"github.com/lightningnetwork/lnd/tor"
 	"github.com/lightningnetwork/lnd/watchtower"
@@ -184,6 +185,7 @@ func SetupLoggers(root *build.SubLoggerManager, interceptor signal.Interceptor) 
 	AddSubLogger(root, "CHCL", interceptor, chancloser.UseLogger)
 	AddSubLogger(root, "LCHN", interceptor, localchans.UseLogger)
 	AddSubLogger(root, "PFSM", interceptor, protofsm.UseLogger)
+	AddSubLogger(root, "SUBS", interceptor, submarineswap.UseLogger)
 
 	AddSubLogger(root, routing.Subsystem, interceptor, routing.UseLogger)
 	AddSubLogger(root, routerrpc.Subsystem, interceptor, routerrpc.UseLogger)
