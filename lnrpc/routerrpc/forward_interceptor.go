@@ -114,9 +114,14 @@ func (r *forwardInterceptor) resolveFromClient(
 
 	switch in.Action {
 	case ResolveHoldForwardAction_RESUME:
+		var onionBlob [lnwire.OnionPacketSize]byte
+		copy(onionBlob[:], in.OnionBlob)
 		return r.htlcSwitch.Resolve(&htlcswitch.FwdResolution{
-			Key:    circuitKey,
-			Action: htlcswitch.FwdActionResume,
+			Key:            circuitKey,
+			Action:         htlcswitch.FwdActionResume,
+			OutgoingAmount: lnwire.MilliSatoshi(in.OutgoingAmountMsat),
+			OutgoingChanID: lnwire.NewShortChanIDFromInt(in.OutgoingRequestedChanId),
+			OnionBlob:      onionBlob,
 		})
 
 	case ResolveHoldForwardAction_FAIL:

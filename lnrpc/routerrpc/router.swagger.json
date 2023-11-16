@@ -1346,6 +1346,19 @@
         "failure_code": {
           "$ref": "#/definitions/FailureFailureCode",
           "description": "Return the specified failure code in case the resolve action is Fail. The\nmessage data fields are populated automatically.\n\nIf a non-zero failure_code is specified, failure_message must not be set.\n\nFor backwards-compatibility reasons, TEMPORARY_CHANNEL_FAILURE is the\ndefault value for this field."
+        },
+        "outgoing_amount_msat": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "outgoing_requested_chan_id": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The requested outgoing channel id for this forwarded htlc. Because of\nnon-strict forwarding, this isn't necessarily the channel over which the\npacket will be forwarded eventually. A different channel to the same peer\nmay be selected as well."
+        },
+        "onion_blob": {
+          "type": "string",
+          "format": "byte"
         }
       },
       "description": "*\nForwardHtlcInterceptResponse enables the caller to resolve a previously hold\nforward. The caller can choose either to:\n- `Resume`: Execute the default behavior (usually forward).\n- `Reject`: Fail the htlc backwards.\n- `Settle`: Settle this htlc with a given preimage."
