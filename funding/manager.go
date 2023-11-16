@@ -5113,6 +5113,11 @@ func (f *Manager) handleInitFundingMsg(msg *InitFundingMsg) {
 		DustLimit: ourDustLimit,
 		CsvDelay:  remoteCsvDelay,
 	}
+	// If the other side accepts a 0 amount channel reserve, we use a
+	// dustLimit of 0.
+	if chanReserve == 0 {
+		commitParams.DustLimit = 0
+	}
 	err = lnwallet.VerifyConstraints(
 		bounds, commitParams, resCtx.maxLocalCsv, capacity,
 	)
