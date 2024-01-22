@@ -362,7 +362,7 @@ func Open(dbPath string, modifiers ...OptionModifier) (*DB, error) {
 // Any necessary schemas migrations due to updates will take place as necessary.
 func CreateWithBackend(backend kvdb.Backend,
 	modifiers ...OptionModifier) (*DB, error) {
-
+	log.Info("CreateWithBackend start called. With opts %#v", modifiers)
 	opts := DefaultOptions()
 	for _, modifier := range modifiers {
 		modifier(&opts)
@@ -370,6 +370,7 @@ func CreateWithBackend(backend kvdb.Backend,
 
 	if !opts.NoMigration {
 		if err := initChannelDB(backend); err != nil {
+			log.Info("Error calling initChannelDB finished with err %v", err)
 			return nil, err
 		}
 	}
@@ -399,6 +400,7 @@ func CreateWithBackend(backend kvdb.Backend,
 		opts.UseGraphCache, opts.NoMigration,
 	)
 	if err != nil {
+		log.Errorf("NewChannelGraph fished with err %v", err)
 		return nil, err
 	}
 

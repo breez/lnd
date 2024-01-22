@@ -695,6 +695,7 @@ func fetchLightningNode(nodeBucket kvdb.RBucket,
 }
 
 func deserializeLightningNode(r io.Reader) (LightningNode, error) {
+	log.Info("deserializeLightningNode")
 	var (
 		node    LightningNode
 		scratch [8]byte
@@ -782,6 +783,7 @@ func deserializeLightningNode(r io.Reader) (LightningNode, error) {
 	case err == io.ErrUnexpectedEOF:
 	case err == io.EOF:
 	case err != nil:
+		log.Errorf("deserializeLightningNode failed")
 		return LightningNode{}, err
 	}
 
@@ -859,9 +861,10 @@ func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, error) {
 	case err == io.ErrUnexpectedEOF:
 	case err == io.EOF:
 	case err != nil:
+		log.Errorf("deserializeChanEdgeInfo hit the limmit and returned err %v with edge info %#v", err, edgeInfo)
 		return ChannelEdgeInfo{}, err
 	}
-
+	log.Infof("edgeinfo %#v", edgeInfo)
 	return edgeInfo, nil
 }
 

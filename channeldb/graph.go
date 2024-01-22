@@ -4443,6 +4443,7 @@ func fetchChanEdgeInfo(edgeIndex kvdb.RBucket,
 }
 
 func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, error) {
+	log.Info("Calling deserializeChanEdgeInfo")
 	var (
 		err      error
 		edgeInfo ChannelEdgeInfo
@@ -4513,6 +4514,7 @@ func deserializeChanEdgeInfo(r io.Reader) (ChannelEdgeInfo, error) {
 	case err == io.ErrUnexpectedEOF:
 	case err == io.EOF:
 	case err != nil:
+		log.Errorf("deserializeChanEdgeInfo failed with err %v and edgeinfo %#v", err, edgeInfo)
 		return ChannelEdgeInfo{}, err
 	}
 
@@ -4866,6 +4868,7 @@ func deserializeChanEdgePolicyRaw(r io.Reader) (*ChannelEdgePolicy, error) {
 	case err == io.ErrUnexpectedEOF:
 	case err == io.EOF:
 	case err != nil:
+		log.Errorf("deserializeChanEdgePolicyRaw failed with %v and edinfo %#v", err, edge)
 		return nil, err
 	}
 

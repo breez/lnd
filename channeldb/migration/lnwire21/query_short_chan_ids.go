@@ -243,6 +243,7 @@ func decodeShortChanIDs(r io.Reader) (ShortChanIDEncoding, []ShortChannelID, err
 			// our limit on the number of bytes we'll read. In
 			// either case, we'll return what we have so far.
 			case err == io.ErrUnexpectedEOF || err == io.EOF:
+
 				return encodingType, shortChanIDs, nil
 
 			// Otherwise, we hit some other sort of error, possibly
