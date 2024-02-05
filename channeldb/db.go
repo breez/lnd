@@ -371,7 +371,7 @@ func CreateWithBackend(backend kvdb.Backend,
 	if !opts.NoMigration {
 		if err := initChannelDB(backend); err != nil {
 			log.Info("Error calling initChannelDB finished with err %v", err)
-			return nil, err
+			return nil, fmt.Errorf("initChannelDB: %w", err)
 		}
 	}
 
@@ -401,21 +401,21 @@ func CreateWithBackend(backend kvdb.Backend,
 	)
 	if err != nil {
 		log.Errorf("NewChannelGraph fished with err %v", err)
-		return nil, err
+		return nil, fmt.Errorf("NewChannelGraph: %w", err)
 	}
 
 	// Synchronize the version of database and apply migrations if needed.
 	if !opts.NoMigration {
 		if err := chanDB.syncVersions(dbVersions); err != nil {
 			backend.Close()
-			return nil, err
+			return nil, fmt.Errorf("chanDB.syncVersions: %w", err)
 		}
 
 		// Grab the optional migration config.
 		omc := opts.OptionalMiragtionConfig
 		if err := chanDB.applyOptionalVersions(omc); err != nil {
 			backend.Close()
-			return nil, err
+			return nil, fmt.Errorf("chanDB.applyOptionalVersions: %w", err)
 		}
 	}
 
@@ -473,7 +473,7 @@ func initChannelDB(db kvdb.Backend) error {
 	err := kvdb.Update(db, func(tx kvdb.RwTx) error {
 		// Check if DB was marked as inactive with a tomb stone.
 		if err := EnsureNoTombstone(tx); err != nil {
-			return err
+			return fmt.Errorf("EnsureNoTombstone: %w", err)
 		}
 
 		meta := &Meta{}
@@ -485,12 +485,16 @@ func initChannelDB(db kvdb.Backend) error {
 
 		for _, tlb := range dbTopLevelBuckets {
 			if _, err := tx.CreateTopLevelBucket(tlb); err != nil {
-				return err
+				return fmt.Errorf("tx.CreateTopLevelBucket: %w", err)
 			}
 		}
 
 		meta.DbVersionNumber = getLatestDBVersion(dbVersions)
-		return putMeta(meta, tx)
+		err = putMeta(meta, tx)
+		if err != nil {
+			return fmt.Errorf("putMeta: %w", err)
+		}
+		return nil
 	}, func() {})
 	if err != nil {
 		return fmt.Errorf("unable to create new channeldb: %v", err)

@@ -196,7 +196,7 @@ func NewChannelGraph(db kvdb.Backend, rejectCacheSize, chanCacheSize int,
 
 	if !noMigrations {
 		if err := initChannelGraph(db); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("initChannelGraph: %w", err)
 		}
 	}
 
@@ -239,7 +239,7 @@ func NewChannelGraph(db kvdb.Backend, rejectCacheSize, chanCacheSize int,
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("g.ForEachChannel: %w", err)
 		}
 
 		log.Debugf("Finished populating in-memory channel graph (took "+
@@ -375,40 +375,43 @@ func initChannelGraph(db kvdb.Backend) error {
 	err := kvdb.Update(db, func(tx kvdb.RwTx) error {
 		for _, tlb := range graphTopLevelBuckets {
 			if _, err := tx.CreateTopLevelBucket(tlb); err != nil {
-				return err
+				return fmt.Errorf("tx.CreateTopLevelBucket: %w", err)
 			}
 		}
 
 		nodes := tx.ReadWriteBucket(nodeBucket)
 		_, err := nodes.CreateBucketIfNotExists(aliasIndexBucket)
 		if err != nil {
-			return err
+			return fmt.Errorf("nodes.CreateBucketIfNotExists: %w", err)
 		}
 		_, err = nodes.CreateBucketIfNotExists(nodeUpdateIndexBucket)
 		if err != nil {
-			return err
+			return fmt.Errorf("nodes.CreateBucketIfNotExists: %w", err)
 		}
 
 		edges := tx.ReadWriteBucket(edgeBucket)
 		_, err = edges.CreateBucketIfNotExists(edgeIndexBucket)
 		if err != nil {
-			return err
+			return fmt.Errorf("nodes.CreateBucketIfNotExists: %w", err)
 		}
 		_, err = edges.CreateBucketIfNotExists(edgeUpdateIndexBucket)
 		if err != nil {
-			return err
+			return fmt.Errorf("nodes.CreateBucketIfNotExists: %w", err)
 		}
 		_, err = edges.CreateBucketIfNotExists(channelPointBucket)
 		if err != nil {
-			return err
+			return fmt.Errorf("nodes.CreateBucketIfNotExists: %w", err)
 		}
 		_, err = edges.CreateBucketIfNotExists(zombieBucket)
 		if err != nil {
-			return err
+			return fmt.Errorf("nodes.CreateBucketIfNotExists: %w", err)
 		}
 
 		graphMeta := tx.ReadWriteBucket(graphMetaBucket)
 		_, err = graphMeta.CreateBucketIfNotExists(pruneLogBucket)
+		if err != nil {
+			return fmt.Errorf("graphMeta.CreateBucketIfNotExists: %w", err)
+		}
 		return err
 	}, func() {})
 	if err != nil {

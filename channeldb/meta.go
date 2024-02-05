@@ -85,10 +85,14 @@ func (d *DB) PutMeta(meta *Meta) error {
 func putMeta(meta *Meta, tx kvdb.RwTx) error {
 	metaBucket, err := tx.CreateTopLevelBucket(metaBucket)
 	if err != nil {
-		return err
+		return fmt.Errorf("tx.CreateTopLevelBucket: %w", err)
 	}
 
-	return putDbVersion(metaBucket, meta)
+	err = putDbVersion(metaBucket, meta)
+	if err != nil {
+		return fmt.Errorf("putDbVersion: %w", err)
+	}
+	return nil
 }
 
 func putDbVersion(metaBucket kvdb.RwBucket, meta *Meta) error {
