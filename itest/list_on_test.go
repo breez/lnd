@@ -550,4 +550,12 @@ var allTestCases = []*lntest.TestCase{
 		Name:     "update pending open channels",
 		TestFunc: testUpdateOnPendingOpenChannels,
 	},
+	{
+		Name:     "listsweeps",
+		TestFunc: testListSweeps,
+	},
+	{
+		Name:     "fail funding flow psbt",
+		TestFunc: testPsbtChanFundingFailFlow,
+	},
 }

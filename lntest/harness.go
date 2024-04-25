@@ -495,7 +495,8 @@ func (h *HarnessTest) Shutdown(node *node.HarnessNode) {
 		return h.manager.shutdownNode(node)
 	}, DefaultTimeout)
 
-	require.NoErrorf(h, err, "unable to shutdown %v", node.Name())
+	require.NoErrorf(h, err, "unable to shutdown %v in %v", node.Name(),
+		h.manager.currentTestCase)
 }
 
 // SuspendNode stops the given node and returns a callback that can be used to
@@ -1983,10 +1984,10 @@ func (h *HarnessTest) FindCommitAndAnchor(sweepTxns []*wire.MsgTx,
 //
 // NOTE: Does not account for node's internal state.
 func (h *HarnessTest) AssertSweepFound(hn *node.HarnessNode,
-	sweep string, verbose bool) {
+	sweep string, verbose bool, startHeight int32) {
 
 	// List all sweeps that alice's node had broadcast.
-	sweepResp := hn.RPC.ListSweeps(verbose)
+	sweepResp := hn.RPC.ListSweeps(verbose, startHeight)
 
 	var found bool
 	if verbose {

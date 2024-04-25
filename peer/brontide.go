@@ -507,8 +507,9 @@ func NewBrontide(cfg Config) *Brontide {
 		activeChannels: &lnutils.SyncMap[
 			lnwire.ChannelID, *lnwallet.LightningChannel,
 		]{},
-		newActiveChannel:  make(chan *newChannelMsg, 1),
-		newPendingChannel: make(chan *newChannelMsg, 1),
+		newActiveChannel:     make(chan *newChannelMsg, 1),
+		newPendingChannel:    make(chan *newChannelMsg, 1),
+		removePendingChannel: make(chan *newChannelMsg),
 
 		activeMsgStreams:   make(map[lnwire.ChannelID]*msgStream),
 		activeChanCloses:   make(map[lnwire.ChannelID]*chancloser.ChanCloser),
@@ -1941,7 +1942,8 @@ func messageSummary(msg lnwire.Message) string {
 			msg.ChanID, int64(msg.FeePerKw))
 
 	case *lnwire.ChannelReestablish:
-		return fmt.Sprintf("next_local_height=%v, remote_tail_height=%v",
+		return fmt.Sprintf("chan_id=%v, next_local_height=%v, "+
+			"remote_tail_height=%v", msg.ChanID,
 			msg.NextLocalCommitHeight, msg.RemoteCommitTailHeight)
 
 	case *lnwire.ReplyShortChanIDsEnd:
