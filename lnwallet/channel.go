@@ -9121,7 +9121,7 @@ func CreateCooperativeCloseTx(fundingTxIn wire.TxIn,
 	}
 
 	var remoteOutputIdx fn.Option[int]
-	haveRemoteOutput := theirBalance >= remoteDust
+	haveRemoteOutput := theirBalance >= remoteDust && theirBalance >= localDust
 	if haveRemoteOutput {
 		closeTx.AddTxOut(&wire.TxOut{
 			PkScript: theirDeliveryScript,
