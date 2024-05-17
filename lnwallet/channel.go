@@ -9476,7 +9476,7 @@ func CreateCooperativeCloseTx(fundingTxIn wire.TxIn,
 	}
 
 	var remoteOutputIdx fn.Option[int]
-	haveRemoteOutput := theirBalance >= remoteDust
+	haveRemoteOutput := theirBalance >= remoteDust && theirBalance >= localDust
 	if haveRemoteOutput {
 		// If a party's script is an OP_RETURN, then we set their
 		// balance to zero.
