@@ -8247,6 +8247,14 @@ func CreateCooperativeCloseTx(fundingTxIn wire.TxIn,
 	closeTx := wire.NewMsgTx(2)
 	closeTx.AddTxIn(&fundingTxIn)
 
+	// It is possible this is a zero reserve channel. In that case the local
+	// dust limit will be below the 'real' dust limit, namely 0. Creating a
+	// transaction with an output below their dust limit would fail, so
+	// remove our output if it falls below their dust limit.
+	if localDust < remoteDust {
+		localDust = remoteDust
+	}
+
 	// Create both cooperative closure outputs, properly respecting the
 	// dust limits of both parties.
 	if ourBalance >= localDust {
