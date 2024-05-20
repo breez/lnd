@@ -435,6 +435,10 @@ type Config struct {
 	// initially announcing channels.
 	DefaultRoutingPolicy models.ForwardingPolicy
 
+	// DefaultRoutingPolicy is the default routing policy used when
+	// initially announcing channels.
+	DefaultPrivateRoutingPolicy models.ForwardingPolicy
+
 	// DefaultMinHtlcIn is the default minimum incoming htlc value that is
 	// set as a channel parameter.
 	DefaultMinHtlcIn lnwire.MilliSatoshi
@@ -1714,6 +1718,7 @@ func (f *Manager) handleFundingOpen(peer lnpeer.Peer,
 	ourContribution := reservation.OurContribution()
 	forwardingPolicy := f.defaultForwardingPolicy(
 		ourContribution.ChannelConstraints,
+		public,
 	)
 
 	// Once the reservation has been created successfully, we add it to
@@ -3280,10 +3285,17 @@ func (f *Manager) extractAnnounceParams(c *channeldb.OpenChannel) (
 	// need to determine the smallest HTLC it deems economically relevant.
 	fwdMinHTLC := c.LocalChanCfg.MinHTLC
 
+	var policy models.ForwardingPolicy
+	isPublic := c.ChannelFlags&lnwire.FFAnnounceChannel == 1
+	if isPublic {
+		policy = f.cfg.DefaultRoutingPolicy
+	} else {
+		policy = f.cfg.DefaultPrivateRoutingPolicy
+	}
 	// We don't necessarily want to go as low as the remote party allows.
 	// Check it against our default forwarding policy.
-	if fwdMinHTLC < f.cfg.DefaultRoutingPolicy.MinHTLCOut {
-		fwdMinHTLC = f.cfg.DefaultRoutingPolicy.MinHTLCOut
+	if fwdMinHTLC < policy.MinHTLCOut {
+		fwdMinHTLC = policy.MinHTLCOut
 	}
 
 	// We'll obtain the max HTLC value we can forward in our direction, as
@@ -3314,13 +3326,13 @@ func (f *Manager) addToRouterGraph(completeChan *channeldb.OpenChannel,
 	chanID := lnwire.NewChanIDFromOutPoint(&completeChan.FundingOutpoint)
 
 	fwdMinHTLC, fwdMaxHTLC := f.extractAnnounceParams(completeChan)
-
+	public := completeChan.ChannelFlags&lnwire.FFAnnounceChannel == 1
 	ann, err := f.newChanAnnouncement(
 		f.cfg.IDKey, completeChan.IdentityPub,
 		&completeChan.LocalChanCfg.MultiSigKey,
 		completeChan.RemoteChanCfg.MultiSigKey.PubKey, *shortChanID,
 		chanID, fwdMinHTLC, fwdMaxHTLC, ourPolicy,
-		completeChan.ChanType,
+		completeChan.ChanType, public,
 	)
 	if err != nil {
 		return fmt.Errorf("error generating channel "+
@@ -4005,6 +4017,7 @@ func (f *Manager) ensureInitialForwardingPolicy(chanID lnwire.ChannelID,
 
 		forwardingPolicy = f.defaultForwardingPolicy(
 			channel.LocalChanCfg.ChannelConstraints,
+			channel.ChannelFlags&lnwire.FFAnnounceChannel == 1,
 		)
 		needDBUpdate = true
 	}
@@ -4056,7 +4069,8 @@ func (f *Manager) newChanAnnouncement(localPubKey,
 	remoteFundingKey *btcec.PublicKey, shortChanID lnwire.ShortChannelID,
 	chanID lnwire.ChannelID, fwdMinHTLC, fwdMaxHTLC lnwire.MilliSatoshi,
 	ourPolicy *channeldb.ChannelEdgePolicy,
-	chanType channeldb.ChannelType) (*chanAnnouncement, error) {
+	chanType channeldb.ChannelType, public bool,
+) (*chanAnnouncement, error) {
 
 	chainHash := *f.cfg.Wallet.Cfg.NetParams.GenesisHash
 
@@ -4131,6 +4145,12 @@ func (f *Manager) newChanAnnouncement(localPubKey,
 	// max_htlc field.
 	msgFlags := lnwire.ChanUpdateRequiredMaxHtlc
 
+	var defaultpolicy models.ForwardingPolicy
+	if public {
+		defaultpolicy = f.cfg.DefaultRoutingPolicy
+	} else {
+		defaultpolicy = f.cfg.DefaultPrivateRoutingPolicy
+	}
 	// We announce the channel with the default values. Some of
 	// these values can later be changed by crafting a new ChannelUpdate.
 	chanUpdateAnn := &lnwire.ChannelUpdate{
@@ -4140,7 +4160,7 @@ func (f *Manager) newChanAnnouncement(localPubKey,
 		MessageFlags:   msgFlags,
 		ChannelFlags:   chanFlags,
 		TimeLockDelta: uint16(
-			f.cfg.DefaultRoutingPolicy.TimeLockDelta,
+			defaultpolicy.TimeLockDelta,
 		),
 		HtlcMinimumMsat: fwdMinHTLC,
 		HtlcMaximumMsat: fwdMaxHTLC,
@@ -4179,10 +4199,10 @@ func (f *Manager) newChanAnnouncement(localPubKey,
 			"announcement of ChannelID(%v). "+
 			"Assuming default fee parameters.", chanID)
 		chanUpdateAnn.BaseFee = uint32(
-			f.cfg.DefaultRoutingPolicy.BaseFee,
+			defaultpolicy.BaseFee,
 		)
 		chanUpdateAnn.FeeRate = uint32(
-			f.cfg.DefaultRoutingPolicy.FeeRate,
+			defaultpolicy.FeeRate,
 		)
 	}
 
@@ -4273,7 +4293,7 @@ func (f *Manager) announceChannel(localIDKey, remoteIDKey *btcec.PublicKey,
 	// only use the channel announcement message from the returned struct.
 	ann, err := f.newChanAnnouncement(localIDKey, remoteIDKey,
 		localFundingKey, remoteFundingKey, shortChanID, chanID,
-		0, 0, nil, chanType,
+		0, 0, nil, chanType, true,
 	)
 	if err != nil {
 		log.Errorf("can't generate channel announcement: %v", err)
@@ -4614,6 +4634,7 @@ func (f *Manager) handleInitFundingMsg(msg *InitFundingMsg) {
 	// values hence we assume default fee settings from the config.
 	forwardingPolicy := f.defaultForwardingPolicy(
 		ourContribution.ChannelConstraints,
+		!msg.Private,
 	)
 	if baseFee != nil {
 		forwardingPolicy.BaseFee = lnwire.MilliSatoshi(*baseFee)
@@ -4958,14 +4979,25 @@ func copyPubKey(pub *btcec.PublicKey) *btcec.PublicKey {
 // defaultForwardingPolicy returns the default forwarding policy based on the
 // default routing policy and our local channel constraints.
 func (f *Manager) defaultForwardingPolicy(
-	constraints channeldb.ChannelConstraints) *models.ForwardingPolicy {
+	constraints channeldb.ChannelConstraints,
+	public bool) *models.ForwardingPolicy {
 
-	return &models.ForwardingPolicy{
-		MinHTLCOut:    constraints.MinHTLC,
-		MaxHTLC:       constraints.MaxPendingAmount,
-		BaseFee:       f.cfg.DefaultRoutingPolicy.BaseFee,
-		FeeRate:       f.cfg.DefaultRoutingPolicy.FeeRate,
-		TimeLockDelta: f.cfg.DefaultRoutingPolicy.TimeLockDelta,
+	if public {
+		return &models.ForwardingPolicy{
+			MinHTLCOut:    constraints.MinHTLC,
+			MaxHTLC:       constraints.MaxPendingAmount,
+			BaseFee:       f.cfg.DefaultRoutingPolicy.BaseFee,
+			FeeRate:       f.cfg.DefaultRoutingPolicy.FeeRate,
+			TimeLockDelta: f.cfg.DefaultRoutingPolicy.TimeLockDelta,
+		}
+	} else {
+		return &models.ForwardingPolicy{
+			MinHTLCOut:    constraints.MinHTLC,
+			MaxHTLC:       constraints.MaxPendingAmount,
+			BaseFee:       f.cfg.DefaultPrivateRoutingPolicy.BaseFee,
+			FeeRate:       f.cfg.DefaultPrivateRoutingPolicy.FeeRate,
+			TimeLockDelta: f.cfg.DefaultPrivateRoutingPolicy.TimeLockDelta,
+		}
 	}
 }
 

@@ -237,6 +237,10 @@ type Config struct {
 	// the Brontide.
 	RoutingPolicy models.ForwardingPolicy
 
+	// PrivateRoutingPolicy is used to set the forwarding policy for links
+	// created by the Brontide on private channels.
+	PrivateRoutingPolicy models.ForwardingPolicy
+
 	// Sphinx is used when setting up ChannelLinks so they can decode sphinx
 	// onion blobs.
 	Sphinx *hop.OnionProcessor
@@ -898,7 +902,12 @@ func (p *Brontide) loadActiveChannels(chans []*channeldb.OpenChannel) (
 			p.log.Warnf("Unable to find our forwarding policy "+
 				"for channel %v, using default values",
 				chanPoint)
-			forwardingPolicy = &p.cfg.RoutingPolicy
+			isPublic := dbChan.ChannelFlags&lnwire.FFAnnounceChannel == 1
+			if isPublic {
+				forwardingPolicy = &p.cfg.RoutingPolicy
+			} else {
+				forwardingPolicy = &p.cfg.PrivateRoutingPolicy
+			}
 		}
 
 		p.log.Tracef("Using link policy of: %v",

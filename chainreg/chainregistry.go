@@ -197,6 +197,10 @@ type PartialChainControl struct {
 	// RoutingPolicy is the routing policy we have decided to use.
 	RoutingPolicy models.ForwardingPolicy
 
+	// RoutingPolicy is the routing policy we have decided to use for
+	// private channels.
+	PrivateRoutingPolicy models.ForwardingPolicy
+
 	// MinHtlcIn is the minimum HTLC we will accept.
 	MinHtlcIn lnwire.MilliSatoshi
 
@@ -276,6 +280,12 @@ func NewPartialChainControl(cfg *Config) (*PartialChainControl, func(), error) {
 			FeeRate:       cfg.Bitcoin.FeeRate,
 			TimeLockDelta: cfg.Bitcoin.TimeLockDelta,
 		}
+		cc.PrivateRoutingPolicy = models.ForwardingPolicy{
+			MinHTLCOut:    cfg.Bitcoin.MinHTLCOut,
+			BaseFee:       cfg.Bitcoin.PrivateBaseFee,
+			FeeRate:       cfg.Bitcoin.PrivateFeeRate,
+			TimeLockDelta: cfg.Bitcoin.PrivateTimeLockDelta,
+		}
 		cc.MinHtlcIn = cfg.Bitcoin.MinHTLCIn
 		cc.FeeEstimator = chainfee.NewStaticEstimator(
 			DefaultBitcoinStaticFeePerKW,
@@ -287,6 +297,12 @@ func NewPartialChainControl(cfg *Config) (*PartialChainControl, func(), error) {
 			BaseFee:       cfg.Litecoin.BaseFee,
 			FeeRate:       cfg.Litecoin.FeeRate,
 			TimeLockDelta: cfg.Litecoin.TimeLockDelta,
+		}
+		cc.PrivateRoutingPolicy = models.ForwardingPolicy{
+			MinHTLCOut:    cfg.Bitcoin.MinHTLCOut,
+			BaseFee:       cfg.Bitcoin.PrivateBaseFee,
+			FeeRate:       cfg.Bitcoin.PrivateFeeRate,
+			TimeLockDelta: cfg.Bitcoin.PrivateTimeLockDelta,
 		}
 		cc.MinHtlcIn = cfg.Litecoin.MinHTLCIn
 		cc.FeeEstimator = chainfee.NewStaticEstimator(
