@@ -380,6 +380,7 @@ func getOutgoingBalance(node route.Vertex, outgoingChans map[uint64]struct{},
 	bandwidthHints bandwidthHints,
 	g routingGraph) (lnwire.MilliSatoshi, lnwire.MilliSatoshi, error) {
 
+	log.Infof("bandwidthHints: %#v", bandwidthHints)
 	var max, total lnwire.MilliSatoshi
 	cb := func(channel *channeldb.DirectedChannel) error {
 		if !channel.OutPolicySet {
@@ -398,7 +399,7 @@ func getOutgoingBalance(node route.Vertex, outgoingChans map[uint64]struct{},
 		bandwidth, ok := bandwidthHints.availableChanBandwidth(
 			chanID, 0,
 		)
-		log.Errorf("bandwidthHints: %#v, chanID: %v, bandwidth: %v, ok: %v", bandwidthHints, bandwidth, ok)
+		log.Infof("chanID: %v, bandwidth: %v, ok: %v", chanID, bandwidth, ok)
 
 		// If the bandwidth is not available, use the channel capacity.
 		// This can happen when a channel is added to the graph after
@@ -973,10 +974,10 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		pathEdges = append(pathEdges, currentNodeWithDist.nextHop)
 
 		if splitNeeded && currentNode != source {
-			log.Errorf("Removing fees - curentNode(dist): %v (%v) nextHop: %v", currentNodeWithDist.node.String(), currentNodeWithDist.dist, currentNodeWithDist.nextHop.ToNodePubKey().String())
-			log.Errorf("Next hop channel id: %v, FeeBaseMSat: %v,  FeeProportionalMillionths: %v", (currentNodeWithDist.nextHop).ChannelID, (currentNodeWithDist.nextHop).FeeBaseMSat, (currentNodeWithDist.nextHop).FeeProportionalMillionths)
+			log.Infof("Removing fees - curentNode(dist): %v (%v) nextHop: %v", currentNodeWithDist.node.String(), currentNodeWithDist.dist, currentNodeWithDist.nextHop.ToNodePubKey().String())
+			log.Infof("Next hop channel id: %v, FeeBaseMSat: %v,  FeeProportionalMillionths: %v", (currentNodeWithDist.nextHop).ChannelID, (currentNodeWithDist.nextHop).FeeBaseMSat, (currentNodeWithDist.nextHop).FeeProportionalMillionths)
 			fees := (currentNodeWithDist.nextHop).ComputeFeeFromIncoming(amt)
-			log.Errorf("Removing fees - before: %v fee: %v after: %v", amt, fees, amt-fees)
+			log.Infof("Removing fees - before: %v fee: %v after: %v", amt, fees, amt-fees)
 			amt -= fees + 1
 		}
 
@@ -1004,7 +1005,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	// findPath, and avoid using ChannelEdgePolicy altogether.
 	pathEdges[len(pathEdges)-1].ToNodeFeatures = features
 
-	log.Debugf("Found route: probability=%v, hops=%v, fee=%v",
+	log.Infof("Found route: probability=%v, hops=%v, fee=%v",
 		distance[source].probability, len(pathEdges),
 		distance[source].amountToReceive-amt)
 	var e error

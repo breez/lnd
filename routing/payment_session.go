@@ -294,7 +294,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 	// client-side MTU that we'll attempt to respect at all times.
 	maxShardActive := p.payment.MaxShardAmt != nil
 	if maxShardActive && maxAmt > *p.payment.MaxShardAmt {
-		p.log.Debug("Clamping payment attempt from %v to %v due to "+
+		p.log.Infof("Clamping payment attempt from %v to %v due to "+
 			"max shard size of %v", maxAmt,
 			*p.payment.MaxShardAmt, maxAmt)
 
@@ -319,7 +319,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			return nil, err
 		}
 
-		p.log.Errorf("pathfinding for amt=%v", maxAmt)
+		p.log.Infof("pathfinding for amt=%v, feelimit=%v", maxAmt, feeLimit)
 
 		sourceVertex := routingGraph.sourceNode()
 
@@ -343,14 +343,14 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			// Don't split if this is a legacy payment without mpp
 			// record.
 			if p.payment.PaymentAddr == nil {
-				p.log.Debugf("not splitting because payment " +
+				p.log.Infof("not splitting because payment " +
 					"address is unspecified")
 
 				return nil, errNoPathFound
 			}
 
 			if p.payment.DestFeatures == nil {
-				p.log.Debug("Not splitting because " +
+				p.log.Infof("Not splitting because " +
 					"destination DestFeatures is nil")
 				return nil, errNoPathFound
 			}
@@ -359,7 +359,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			if !destFeatures.HasFeature(lnwire.MPPOptional) &&
 				!destFeatures.HasFeature(lnwire.AMPOptional) {
 
-				p.log.Debug("not splitting because " +
+				p.log.Infof("not splitting because " +
 					"destination doesn't declare MPP or AMP")
 
 				return nil, errNoPathFound
@@ -368,7 +368,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			// No splitting if this is the last shard.
 			isLastShard := activeShards+1 >= p.payment.MaxParts
 			if isLastShard {
-				p.log.Errorf("not splitting because shard "+
+				p.log.Infof("not splitting because shard "+
 					"limit %v has been reached",
 					p.payment.MaxParts)
 
@@ -377,10 +377,10 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 
 			var e extendedNoRouteError
 			if errors.As(err, &e) {
-				p.log.Errorf("Splitting amount: %v and using the smaller amount: %v", maxAmt, e.amt)
+				p.log.Infof("Splitting amount: %v and using the smaller amount: %v", maxAmt, e.amt)
 				maxAmt = e.amt
 			} else {
-				p.log.Errorf("Splitting amount: %v and divide by 2: %v", maxAmt, maxAmt/2)
+				p.log.Infof("Splitting amount: %v and divide by 2: %v", maxAmt, maxAmt/2)
 				// This is where the magic happens. If we can't find a
 				// route, try it for half the amount.
 				maxAmt /= 2
@@ -402,12 +402,13 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 		// any case, but the sent out partial payments would be held by
 		// the receiver until the mpp timeout.
 		case errors.Is(err, errInsufficientBalance):
-			p.log.Errorf("not splitting because local balance " +
+			p.log.Infof("not splitting because local balance " +
 				"is insufficient")
 
 			return nil, errInsufficientBalance
 
 		case err != nil:
+			p.log.Info("Failed to find path: %v", err)
 			return nil, err
 		}
 
@@ -426,9 +427,11 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 			},
 		)
 		if err != nil {
+			log.Warnf("Failed to construct new route: %v", err)
 			return nil, err
 		}
 
+		log.Infof("Constructed a new route: %v", spew.Sdump(route.Hops))
 		return route, err
 	}
 }

@@ -128,7 +128,7 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, error) {
 		paySession:   p.paySession,
 	}
 
-	log.Errorf("Resuming payment for hash %v", p.identifier)
+	log.Infof("Resuming payment for hash %v", p.identifier)
 
 	// When the payment lifecycle loop exits, we make sure to signal any
 	// sub goroutine of the shardHandler to exit, then wait for them to
@@ -140,13 +140,14 @@ func (p *paymentLifecycle) resumePayment() ([32]byte, *route.Route, error) {
 	// lifecycle loop below.
 	payment, _, err := p.fetchPaymentState()
 	if err != nil {
+		log.Errorf("Failed to fetch payment state: %v", err)
 		return [32]byte{}, nil, err
 	}
 
 	for _, a := range payment.InFlightHTLCs() {
 		a := a
 
-		log.Errorf("Resuming payment shard %v for hash %v",
+		log.Infof("Resuming payment shard %v for hash %v",
 			a.AttemptID, p.identifier)
 
 		shardHandler.collectResultAsync(&a.HTLCAttemptInfo)
@@ -159,6 +160,7 @@ lifecycle:
 		// Start by quickly checking if there are any outcomes already
 		// available to handle before we reevaluate our state.
 		if err := shardHandler.checkShards(); err != nil {
+			log.Warnf("Got error checking shards: %v", err)
 			return [32]byte{}, nil, err
 		}
 
@@ -169,10 +171,11 @@ lifecycle:
 		// state is consistent as a whole.
 		payment, currentState, err := p.fetchPaymentState()
 		if err != nil {
+			log.Errorf("Failed to fetch payment state: %v", err)
 			return [32]byte{}, nil, err
 		}
 
-		log.Debugf("Payment %v in state terminate=%v, "+
+		log.Infof("Payment %v in state terminate=%v, "+
 			"active_shards=%v, rem_value=%v, fee_limit=%v",
 			p.identifier, currentState.terminate,
 			currentState.numShardsInFlight,
@@ -205,6 +208,7 @@ lifecycle:
 				return a.Settle.Preimage, &a.Route, nil
 			}
 
+			log.Infof("Payment failed with reason: %v", *payment.FailureReason)
 			// Payment failed.
 			return [32]byte{}, nil, *payment.FailureReason
 
@@ -216,6 +220,7 @@ lifecycle:
 			// outcome to be available before re-evaluating our
 			// state.
 			if err := shardHandler.waitForShard(); err != nil {
+				log.Warnf("Got error waiting for shard: %v", err)
 				return [32]byte{}, nil, err
 			}
 			continue lifecycle
@@ -271,7 +276,7 @@ lifecycle:
 			// send the payment, so mark it failed with no route.
 			if currentState.numShardsInFlight == 0 {
 				failureCode := routeErr.FailureReason()
-				log.Debugf("Marking payment %v permanently "+
+				log.Infof("Marking payment %v permanently "+
 					"failed with no route: %v",
 					p.identifier, failureCode)
 
@@ -288,6 +293,7 @@ lifecycle:
 			// We still have active shards, we'll wait for an
 			// outcome to be available before retrying.
 			if err := shardHandler.waitForShard(); err != nil {
+				log.Warnf("Got error waiting for shard: %v", err)
 				return [32]byte{}, nil, err
 			}
 			continue lifecycle
@@ -313,6 +319,9 @@ lifecycle:
 			continue lifecycle
 
 		case err != nil:
+			log.Warnf("Launch shard failed %v for "+
+				"payment %v: %v", attempt.AttemptID,
+				p.identifier, err)
 			return [32]byte{}, nil, err
 		}
 
@@ -825,7 +834,7 @@ func (p *shardHandler) handleSendError(attempt *channeldb.HTLCAttemptInfo,
 	}
 
 	if sendErr == htlcswitch.ErrUnreadableFailureMessage {
-		log.Tracef("Unreadable failure when sending htlc")
+		log.Infof("Unreadable failure when sending htlc")
 
 		return reportFail(nil, nil)
 	}
@@ -863,8 +872,8 @@ func (p *shardHandler) handleSendError(attempt *channeldb.HTLCAttemptInfo,
 		return failPayment(&internalErrorReason, sendErr)
 	}
 
-	log.Tracef("Node=%v reported failure when sending htlc",
-		failureSourceIdx)
+	log.Infof("Node=%v reported failure when sending htlc, code: %v",
+		failureSourceIdx, failureMessage.Code())
 
 	return reportFail(&failureSourceIdx, failureMessage)
 }
@@ -928,16 +937,20 @@ func (p *shardHandler) handleFailureMessage(rt *route.Route,
 		if !p.paySession.UpdateAdditionalEdge(
 			update, errSource, policy) {
 
-			log.Debugf("Invalid channel update received: node=%v",
-				errVertex)
+			log.Infof("Invalid channel update received: node=%v, "+
+				"scid=%v, base=%v, rate=%v, cltv=%v", errVertex,
+				update.ShortChannelID.String(), update.BaseFee,
+				update.FeeRate, update.TimeLockDelta)
 		}
 		return nil
 	}
 
 	// Apply channel update to the channel edge policy in our db.
 	if !p.router.applyChannelUpdate(update) {
-		log.Debugf("Invalid channel update received: node=%v",
-			errVertex)
+		log.Infof("Invalid channel update received: node=%v, "+
+			"scid=%v, base=%v, rate=%v, cltv=%v", errVertex,
+			update.ShortChannelID.String(), update.BaseFee,
+			update.FeeRate, update.TimeLockDelta)
 	}
 	return nil
 }
