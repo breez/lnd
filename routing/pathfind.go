@@ -848,6 +848,10 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		}
 		distance[fromVertex] = withDist
 
+		log.Trace(newLogClosure(func() string {
+			return fmt.Sprintf("added nodewithdist dist=%v, weight=%v, node=%v, amount=%v, incomingCltv=%v, prob=%v, next=%v, size=%v",
+				tempDist, tempWeight, fromVertex, amountToReceive, incomingCltv, probability, edge.policy.ChannelID, routingInfoSize)
+		}))
 		// Either push withDist onto the heap if the node
 		// represented by fromVertex is not already on the heap OR adjust
 		// its position within the heap via heap.Fix.
