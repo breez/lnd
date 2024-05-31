@@ -660,15 +660,20 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			edge.capacity,
 		)
 
-		log.Trace(newLogClosure(func() string {
-			return fmt.Sprintf("path finding probability: fromnode=%v,"+
-				" tonode=%v, amt=%v, cap=%v, probability=%v",
-				fromVertex, toNodeDist.node, amountToSend,
-				edge.capacity, edgeProbability)
-		}))
+		// log.Trace(newLogClosure(func() string {
+		// 	return fmt.Sprintf("path finding probability: fromnode=%v,"+
+		// 		" tonode=%v, amt=%v, cap=%v, probability=%v",
+		// 		fromVertex, toNodeDist.node, amountToSend,
+		// 		edge.capacity, edgeProbability)
+		// }))
 
 		// If the probability is zero, there is no point in trying.
 		if edgeProbability == 0 {
+			log.Trace(newLogClosure(func() string {
+				return fmt.Sprintf("skipped fromnode=%v,"+
+					" tonode=%v because edgeProbability == 0",
+					fromVertex, toNodeDist.node)
+			}))
 			return
 		}
 
