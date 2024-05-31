@@ -693,6 +693,12 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 
 		// Check that we are within our CLTV limit.
 		if uint64(incomingCltv) > absoluteCltvLimit {
+			log.Trace(newLogClosure(func() string {
+				return fmt.Sprintf("skipped fromnode=%v,"+
+					" tonode=%v because incomingctlv=%v > absolutecltvlimit=%v",
+					fromVertex, toNodeDist.node, incomingCltv,
+					absoluteCltvLimit)
+			}))
 			return
 		}
 
@@ -707,6 +713,12 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// node would be added to the path.
 		totalFee := amountToReceive - amt
 		if totalFee > r.FeeLimit {
+			log.Trace(newLogClosure(func() string {
+				return fmt.Sprintf("skipped fromnode=%v,"+
+					" tonode=%v because totalfee=%v > feelimit=%v",
+					fromVertex, toNodeDist.node, totalFee,
+					r.FeeLimit)
+			}))
 			return
 		}
 
@@ -719,6 +731,12 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// abandon this direction. Adding further nodes can only lower
 		// the probability more.
 		if probability < cfg.MinProbability {
+			log.Trace(newLogClosure(func() string {
+				return fmt.Sprintf("skipped fromnode=%v,"+
+					" tonode=%v because probability=%v < minprobability=%v",
+					fromVertex, toNodeDist.node, probability,
+					cfg.MinProbability)
+			}))
 			return
 		}
 
@@ -747,6 +765,12 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			// If this route is worse than what we already found,
 			// skip this route.
 			if tempDist > current.dist {
+				log.Trace(newLogClosure(func() string {
+					return fmt.Sprintf("skipped fromnode=%v,"+
+						" tonode=%v because tempdist=%v > currentdist=%v",
+						fromVertex, toNodeDist.node, tempDist,
+						current.dist)
+				}))
 				return
 			}
 
@@ -757,6 +781,12 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			// endless loop.
 			probNotBetter := probability <= current.probability
 			if tempDist == current.dist && probNotBetter {
+				log.Trace(newLogClosure(func() string {
+					return fmt.Sprintf("skipped fromnode=%v,"+
+						" tonode=%v because tempdist=%v == currentdist=%v && probnotbetter",
+						fromVertex, toNodeDist.node, tempDist,
+						current.dist)
+				}))
 				return
 			}
 		}
@@ -793,6 +823,12 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 
 		// Skip paths that would exceed the maximum routing info size.
 		if routingInfoSize > sphinx.MaxPayloadSize {
+			log.Trace(newLogClosure(func() string {
+				return fmt.Sprintf("skipped fromnode=%v,"+
+					" tonode=%v because routinginfosize=%v > maxpayloadsize=%v",
+					fromVertex, toNodeDist.node, routingInfoSize,
+					sphinx.MaxPayloadSize)
+			}))
 			return
 		}
 
@@ -965,6 +1001,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// Determine the next hop forward using the next map.
 		currentNodeWithDist, ok := distance[currentNode]
 		if !ok {
+			log.Infof("Did not find a path further than %v", source)
 			// If the node doesn't have a next hop it means we
 			// didn't find a path.
 			return nil, 0, errNoPathFound
