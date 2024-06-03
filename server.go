@@ -1043,10 +1043,15 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 	}, nodeKeyDesc)
 
 	s.localChanMgr = &localchans.Manager{
+		SelfPub:                   nodeKeyDesc.PubKey,
+		DefaultRoutingPolicy:      cc.RoutingPolicy,
 		ForAllOutgoingChannels:    s.chanRouter.ForAllOutgoingChannels,
 		PropagateChanPolicyUpdate: s.authGossiper.PropagateChanPolicyUpdate,
 		UpdateForwardingPolicies:  s.htlcSwitch.UpdateForwardingPolicies,
 		FetchChannel:              s.chanStateDB.FetchChannel,
+		AddEdge: func(edge *models.ChannelEdgeInfo) error {
+			return s.chanRouter.AddEdge(edge, nil)
+		},
 	}
 
 	utxnStore, err := contractcourt.NewNurseryStore(
