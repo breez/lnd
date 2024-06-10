@@ -872,8 +872,10 @@ func (p *shardHandler) handleSendError(attempt *channeldb.HTLCAttemptInfo,
 		return failPayment(&internalErrorReason, sendErr)
 	}
 
-	log.Infof("Node=%v reported failure when sending htlc, code: %v",
-		failureSourceIdx, failureMessage.Code())
+	if failureMessage != nil {
+		log.Infof("Node=%v reported failure when sending htlc, code: %v",
+			failureSourceIdx, failureMessage.Code())
+	}
 
 	return reportFail(&failureSourceIdx, failureMessage)
 }
