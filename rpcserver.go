@@ -2761,7 +2761,7 @@ func abandonChanFromGraph(chanGraph *channeldb.ChannelGraph,
 	// the graph, so we'll return a nil error.
 	chanID, err := chanGraph.ChannelID(chanPoint)
 	switch {
-	case err == channeldb.ErrEdgeNotFound:
+	case errors.Is(err, channeldb.ErrEdgeNotFound):
 		return nil
 	case err != nil:
 		return err
@@ -3224,7 +3224,7 @@ func (r *rpcServer) GetPeerIdByScid(
 		base.ToUint64(),
 	)
 	if err == channeldb.ErrGraphNoEdgesFound ||
-		err == channeldb.ErrEdgeNotFound {
+		errors.Is(err, channeldb.ErrEdgeNotFound) {
 		return &lnrpc.GetPeerIdByScidResponse{}, nil
 	}
 	if err != nil {
