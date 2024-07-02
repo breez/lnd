@@ -4240,6 +4240,15 @@ message PolicyUpdateRequest {
 
     // If true, min_htlc_msat is applied.
     bool min_htlc_msat_specified = 8;
+
+    // Under unknown circumstances a channel can exist with a missing edge in
+    // the graph database. This can cause an 'edge not found' error when calling
+    // `getchaninfo` and/or cause the default channel policy to be used during
+    // forwards. Setting this flag will recreate the edge if not found, allowing
+    // updating this channel policy and fixing the missing edge problem for this
+    // channel permanently. For fields not set in this command, the default
+    // policy will be created.
+    bool create_missing_edge = 11;
 }
 enum UpdateFailure {
     UPDATE_FAILURE_UNKNOWN = 0;
