@@ -23,6 +23,7 @@ import (
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/kvdb"
+	"github.com/lightningnetwork/lnd/lntypes"
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/btcwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
@@ -586,7 +587,7 @@ func RedeemFees(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwal
 	// Calcluate the weight and the fee
 	weight := 4*redeemTx.SerializeSizeStripped() + redeemWitnessInputSize*len(redeemTx.TxIn)
 	// Adjust the amount in the txout
-	return feePerKw.FeeForWeight(int64(weight)), nil
+	return feePerKw.FeeForWeight(lntypes.WeightUnit(weight)), nil
 }
 
 // Redeem
@@ -638,7 +639,7 @@ func Redeem(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwallet.
 	// Calcluate the weight and the fee
 	weight := 4*redeemTx.SerializeSizeStripped() + redeemWitnessInputSize*len(redeemTx.TxIn)
 	// Adjust the amount in the txout
-	redeemTx.TxOut[0].Value = int64(amount - feePerKw.FeeForWeight(int64(weight)))
+	redeemTx.TxOut[0].Value = int64(amount - feePerKw.FeeForWeight(lntypes.WeightUnit(weight)))
 
 	sigHashes := input.NewTxSigHashesV0Only(redeemTx)
 	privateKey, _ := btcec.PrivKeyFromBytes(serviceKey)
@@ -707,7 +708,7 @@ func RefundTx(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwalle
 
 	// Calcluate the weight and the fee
 	weight := 4*refundTx.SerializeSizeStripped() + refundWitnessInputSize*len(refundTx.TxIn)
-	fees := feePerKw.FeeForWeight(int64(weight))
+	fees := feePerKw.FeeForWeight(lntypes.WeightUnit(weight))
 	// Adjust the amount in the txout
 	refundTx.TxOut[0].Value = int64(amount - fees)
 

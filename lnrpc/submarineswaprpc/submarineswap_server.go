@@ -384,12 +384,12 @@ func (s *Server) UnspentAmount(ctx context.Context,
 func (s *Server) SubSwapServiceRedeemFees(ctx context.Context,
 	in *SubSwapServiceRedeemFeesRequest) (*SubSwapServiceRedeemFeesResponse, error) {
 	satPerKw := chainfee.SatPerKVByte(in.SatPerByte * 1000).FeePerKWeight()
-	feePerKw, err := sweep.DetermineFeePerKw(
-		s.cfg.FeeEstimator, sweep.FeePreference{
-			ConfTarget: uint32(in.TargetConf),
-			FeeRate:    satPerKw,
-		},
-	)
+
+	feePerKw, err := sweep.FeeEstimateInfo{
+		ConfTarget: uint32(in.TargetConf),
+		FeeRate:    satPerKw,
+	}.Estimate(s.cfg.FeeEstimator, 0)
+
 	if err != nil {
 		return nil, err
 	}
@@ -416,12 +416,10 @@ func (s *Server) SubSwapServiceRedeem(ctx context.Context,
 	}
 
 	satPerKw := chainfee.SatPerKVByte(in.SatPerByte * 1000).FeePerKWeight()
-	feePerKw, err := sweep.DetermineFeePerKw(
-		s.cfg.FeeEstimator, sweep.FeePreference{
-			ConfTarget: uint32(in.TargetConf),
-			FeeRate:    satPerKw,
-		},
-	)
+	feePerKw, err := sweep.FeeEstimateInfo{
+		ConfTarget: uint32(in.TargetConf),
+		FeeRate:    satPerKw,
+	}.Estimate(s.cfg.FeeEstimator, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -454,12 +452,10 @@ func (s *Server) SubSwapClientRefund(ctx context.Context,
 	}
 
 	satPerKw := chainfee.SatPerKVByte(in.SatPerByte * 1000).FeePerKWeight()
-	feePerKw, err := sweep.DetermineFeePerKw(
-		s.cfg.FeeEstimator, sweep.FeePreference{
-			ConfTarget: uint32(in.TargetConf),
-			FeeRate:    satPerKw,
-		},
-	)
+	feePerKw, err := sweep.FeeEstimateInfo{
+		ConfTarget: uint32(in.TargetConf),
+		FeeRate:    satPerKw,
+	}.Estimate(s.cfg.FeeEstimator, 0)
 	if err != nil {
 		return nil, err
 	}
