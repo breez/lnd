@@ -1,0 +1,11 @@
+{
+  "lsp": {
+    "gopls": {
+      "initialization_options": {
+        "buildFlags": [
+          "-tags=submarineswaprpc,chanreservedynamic,autopilotrpc,chainrpc,dev,invoicesrpc,neutrinorpc,peersrpc,signrpc,walletrpc,watchtowerrpc"
+        ]
+      }
+    }
+  }
+}
