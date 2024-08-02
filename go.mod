@@ -205,7 +205,7 @@ replace github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 replace google.golang.org/protobuf => github.com/lightninglabs/protobuf-go-hex-display v1.30.0-hex-display
 
 //
-replace github.com/btcsuite/btcwallet => github.com/breez/btcwallet v0.16.10-0.20240711072521-6d784a4cef18
+replace github.com/btcsuite/btcwallet => github.com/breez/btcwallet v0.16.10-0.20240804044631-49109b362292
 
 // If you change this please also update .github/pull_request_template.md and
 // docs/INSTALL.md.
