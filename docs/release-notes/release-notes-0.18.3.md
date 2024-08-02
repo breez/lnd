@@ -147,6 +147,10 @@ that validate `ChannelAnnouncement` messages.
   sendcoins --addr YOUR_ADDR --utxo selected_wallet_utxo1 --utxo selected_wallet_utxo2 --sweepall
   ```
 
+* [`updatechanpolicy`](https://github.com/lightningnetwork/lnd/pull/8805) will
+  now update the channel policy if the edge was not found in the graph
+  database if the `create_missing_edge` flag is set.
+
 # Improvements
 ## Functional Updates
 
