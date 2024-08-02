@@ -1050,7 +1050,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr,
 		UpdateForwardingPolicies:  s.htlcSwitch.UpdateForwardingPolicies,
 		FetchChannel:              s.chanStateDB.FetchChannel,
 		AddEdge: func(edge *models.ChannelEdgeInfo) error {
-			return s.chanRouter.AddEdge(edge, nil)
+			return s.chanRouter.AddEdge(edge)
 		},
 	}
 
