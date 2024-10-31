@@ -13,6 +13,7 @@ import (
 	"github.com/lightningnetwork/lnd/channeldb/models"
 	"github.com/lightningnetwork/lnd/discovery"
 	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/graph"
 	"github.com/lightningnetwork/lnd/kvdb"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -99,7 +100,8 @@ func (r *Manager) UpdatePolicy(newSchema routing.ChannelPolicy,
 		delete(unprocessedChans, info.ChannelPoint)
 
 		// Apply the new policy to the edge.
-		err := r.updateEdge(tx, info.ChannelPoint, edge, newSchema)
+		err := r.updateEdge(tx, info.ChannelPoint, edge, newSchema,
+			createMissingEdge)
 		if err != nil {
 			failedUpdates = append(failedUpdates,
 				makeFailureItem(info.ChannelPoint,
@@ -309,7 +311,8 @@ func (r *Manager) createEdge(channel *channeldb.OpenChannel,
 // updateEdge updates the given edge with the new schema.
 func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	edge *models.ChannelEdgePolicy,
-	newSchema routing.ChannelPolicy) error {
+	newSchema routing.ChannelPolicy,
+	createMissingEdge bool) error {
 
 	channel, err := r.FetchChannel(tx, chanPoint)
 	if err != nil {
@@ -319,9 +322,13 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	// If due to some unforeseen circumstances the policy doesn't exist,
 	// recreate it here.
 	if edge == nil {
-		_, edge, err = r.createEdge(channel, time.Now())
-		if err != nil {
-			return err
+		if createMissingEdge {
+			_, edge, err = r.createEdge(channel, time.Now())
+			if err != nil {
+				return err
+			}
+		} else {
+			return graph.ErrSelfNodeHasNoPolicy
 		}
 	}
 

@@ -54,6 +54,11 @@ var (
 	// ErrGraphBuilderShuttingDown is returned if the graph builder is in
 	// the process of shutting down.
 	ErrGraphBuilderShuttingDown = fmt.Errorf("graph builder shutting down")
+
+	// ErrSelfNodeHasNoPolicy is returned when a channel from the self node
+	// has no channel policy.
+	ErrSelfNodeHasNoPolicy = fmt.Errorf("channel from self node has no " +
+		"policy")
 )
 
 // Config holds the configuration required by the Builder.
@@ -1654,8 +1659,7 @@ func (b *Builder) ForAllOutgoingChannels(cb func(kvdb.RTx,
 			_ *models.ChannelEdgePolicy) error {
 
 			if e == nil {
-				return fmt.Errorf("channel from self node " +
-					"has no policy")
+				return ErrSelfNodeHasNoPolicy
 			}
 
 			return cb(tx, c, e)
