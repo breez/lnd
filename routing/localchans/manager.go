@@ -311,6 +311,20 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	edge *models.ChannelEdgePolicy,
 	newSchema routing.ChannelPolicy) error {
 
+	channel, err := r.FetchChannel(tx, chanPoint)
+	if err != nil {
+		return err
+	}
+
+	// If due to some unforeseen circumstances the policy doesn't exist,
+	// recreate it here.
+	if edge == nil {
+		_, edge, err = r.createEdge(channel, time.Now())
+		if err != nil {
+			return err
+		}
+	}
+
 	// Update forwarding fee scheme and required time lock delta.
 	edge.FeeBaseMSat = newSchema.BaseFee
 	edge.FeeProportionalMillionths = lnwire.MilliSatoshi(
@@ -318,7 +332,7 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	)
 
 	// If inbound fees are set, we update the edge with them.
-	err := fn.MapOptionZ(newSchema.InboundFee,
+	err = fn.MapOptionZ(newSchema.InboundFee,
 		func(f models.InboundFee) error {
 			inboundWireFee := f.ToWire()
 			return edge.ExtraOpaqueData.PackRecords(
@@ -332,7 +346,7 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	edge.TimeLockDelta = uint16(newSchema.TimeLockDelta)
 
 	// Retrieve negotiated channel htlc amt limits.
-	amtMin, amtMax, err := r.getHtlcAmtLimits(tx, chanPoint)
+	amtMin, amtMax, err := r.getHtlcAmtLimits(channel)
 	if err != nil {
 		return err
 	}
@@ -393,13 +407,8 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 
 // getHtlcAmtLimits retrieves the negotiated channel min and max htlc amount
 // constraints.
-func (r *Manager) getHtlcAmtLimits(tx kvdb.RTx, chanPoint wire.OutPoint) (
+func (r *Manager) getHtlcAmtLimits(ch *channeldb.OpenChannel) (
 	lnwire.MilliSatoshi, lnwire.MilliSatoshi, error) {
-
-	ch, err := r.FetchChannel(tx, chanPoint)
-	if err != nil {
-		return 0, 0, err
-	}
 
 	// The max htlc policy field must be less than or equal to the channel
 	// capacity AND less than or equal to the max in-flight HTLC value.
