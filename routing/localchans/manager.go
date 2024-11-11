@@ -99,7 +99,7 @@ func (r *Manager) UpdatePolicy(newSchema routing.ChannelPolicy,
 		delete(unprocessedChans, info.ChannelPoint)
 
 		// Apply the new policy to the edge.
-		err := r.updateEdge(tx, info.ChannelPoint, edge, newSchema)
+		edge, err := r.updateEdge(tx, info.ChannelPoint, edge, newSchema)
 		if err != nil {
 			failedUpdates = append(failedUpdates,
 				makeFailureItem(info.ChannelPoint,
@@ -309,11 +309,11 @@ func (r *Manager) createEdge(channel *channeldb.OpenChannel,
 // updateEdge updates the given edge with the new schema.
 func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	edge *models.ChannelEdgePolicy,
-	newSchema routing.ChannelPolicy) error {
+	newSchema routing.ChannelPolicy) (*models.ChannelEdgePolicy, error) {
 
 	channel, err := r.FetchChannel(tx, chanPoint)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// If due to some unforeseen circumstances the policy doesn't exist,
@@ -321,7 +321,7 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	if edge == nil {
 		_, edge, err = r.createEdge(channel, time.Now())
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -340,7 +340,7 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 			)
 		})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	edge.TimeLockDelta = uint16(newSchema.TimeLockDelta)
@@ -348,7 +348,7 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	// Retrieve negotiated channel htlc amt limits.
 	amtMin, amtMax, err := r.getHtlcAmtLimits(channel)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// We now update the edge max htlc value.
@@ -381,19 +381,19 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	// Validate htlc amount constraints.
 	switch {
 	case edge.MinHTLC < amtMin:
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"min htlc amount of %v is below min htlc parameter of %v",
 			edge.MinHTLC, amtMin,
 		)
 
 	case edge.MaxHTLC > amtMax:
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"max htlc size of %v is above max pending amount of %v",
 			edge.MaxHTLC, amtMax,
 		)
 
 	case edge.MinHTLC > edge.MaxHTLC:
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"min_htlc %v greater than max_htlc %v",
 			edge.MinHTLC, edge.MaxHTLC,
 		)
@@ -402,7 +402,7 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 	// Clear signature to help prevent usage of the previous signature.
 	edge.SetSigBytes(nil)
 
-	return nil
+	return edge, nil
 }
 
 // getHtlcAmtLimits retrieves the negotiated channel min and max htlc amount
