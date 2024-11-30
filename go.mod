@@ -210,6 +210,7 @@ replace github.com/lightningnetwork/lnd/sqldb => ./sqldb
 
 //
 replace github.com/btcsuite/btcwallet => github.com/breez/btcwallet v0.16.10-0.20241026173810-25a62401fb87
+replace github.com/lightningnetwork/lnd/cert => ./cert
 
 // If you change this please also update .github/pull_request_template.md,
 // docs/INSTALL.md and GO_IMAGE in lnrpc/gen_protos_docker.sh.
