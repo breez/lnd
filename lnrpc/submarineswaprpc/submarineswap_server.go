@@ -298,7 +298,11 @@ func (s *Server) SubSwapServiceInit(ctx context.Context,
 	in *SubSwapServiceInitRequest) (*SubSwapServiceInitResponse, error) {
 	b := s.cfg.Wallet.WalletController.(*btcwallet.BtcWallet).InternalWallet()
 	//Create a new submarine address and associated script
-	addr, script, swapServicePubKey, lockHeight, err := submarineswap.NewSubmarineSwap(
+	lockHeight := in.LockHeight
+	if lockHeight == 0 {
+		lockHeight = defaultLockHeight
+	}
+	addr, script, swapServicePubKey, err := submarineswap.NewSubmarineSwap(
 		b.Database(),
 		b.Manager,
 		s.cfg.ActiveNetParams,
@@ -306,6 +310,7 @@ func (s *Server) SubSwapServiceInit(ctx context.Context,
 		s.cfg.Wallet.Cfg.Database,
 		in.Pubkey,
 		in.Hash,
+		lockHeight,
 	)
 	if err != nil {
 		return nil, err

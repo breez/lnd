@@ -320,7 +320,8 @@ func SubmarineSwapInit() (preimage, hash, key, pubKey []byte, err error) {
 }
 
 func NewSubmarineSwap(wdb walletdb.DB, manager *waddrmgr.Manager, net *chaincfg.Params,
-	chainClient chain.Interface, c *channeldb.ChannelStateDB, pubKey, hash []byte) (address btcutil.Address, script, swapperPubKey []byte, lockHeight int64, err error) {
+	chainClient chain.Interface, c *channeldb.ChannelStateDB, pubKey, hash []byte,
+	lockHeight int64) (address btcutil.Address, script, swapperPubKey []byte, err error) {
 
 	if len(pubKey) != btcec.PubKeyBytesLenCompressed {
 		err = errors.New("pubKey not valid")
@@ -346,7 +347,6 @@ func NewSubmarineSwap(wdb walletdb.DB, manager *waddrmgr.Manager, net *chaincfg.
 	}
 	swapperKey := key.Serialize()
 	swapperPubKey = key.PubKey().SerializeCompressed()
-	lockHeight = defaultLockHeight
 
 	//Create the script
 	script, err = genSubmarineSwapScript(swapperPubKey, pubKey, hash, defaultLockHeight)
