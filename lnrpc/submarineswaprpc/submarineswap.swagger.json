@@ -403,6 +403,10 @@
         "pubkey": {
           "type": "string",
           "format": "byte"
+        },
+        "lock_height": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

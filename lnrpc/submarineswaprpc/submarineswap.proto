@@ -16,6 +16,7 @@ message SubSwapClientInitResponse {
 message SubSwapServiceInitRequest {
     bytes hash = 1 [json_name = "hash"];
     bytes pubkey = 2 [json_name = "pubkey"];
+    int64 lock_height = 3 [json_name = "lock_height"];
 }
 message SubSwapServiceInitResponse {
     string address = 1 [json_name = "address"];
