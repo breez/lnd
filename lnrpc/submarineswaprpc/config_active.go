@@ -5,6 +5,7 @@ package submarineswaprpc
 
 import (
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcwallet/chain"
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/macaroons"
@@ -39,4 +40,8 @@ type Config struct {
 	FeeEstimator chainfee.Estimator
 
 	Wallet *lnwallet.LightningWallet
+
+	// ChainSource is the primary chain interface for interacting with
+	// the blockchain backend.
+	ChainSource chain.Interface
 }

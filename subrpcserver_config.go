@@ -339,6 +339,9 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 			subCfgValue.FieldByName("Wallet").Set(
 				reflect.ValueOf(cc.Wallet),
 			)
+			subCfgValue.FieldByName("ChainSource").Set(
+				reflect.ValueOf(cc.PartialChainControl.ChainSource),
+			)
 
 		case *wtclientrpc.Config:
 			subCfgValue := extractReflectValue(subCfg)

@@ -305,9 +305,9 @@ func (s *Server) SubSwapServiceInit(ctx context.Context,
 	}
 	addr, script, swapServicePubKey, err := submarineswap.NewSubmarineSwap(
 		b.Database(),
-		b.Manager,
+		b.AddrManager(),
 		s.cfg.ActiveNetParams,
-		b.ChainClient(),
+		s.cfg.ChainSource,
 		s.cfg.Wallet.Cfg.Database,
 		in.Pubkey,
 		in.Hash,
@@ -326,9 +326,9 @@ func (s *Server) SubSwapClientWatch(ctx context.Context,
 	b := s.cfg.Wallet.WalletController.(*btcwallet.BtcWallet).InternalWallet()
 	address, script, err := submarineswap.WatchSubmarineSwap(
 		b.Database(),
-		b.Manager,
+		b.AddrManager(),
 		s.cfg.ActiveNetParams,
-		b.ChainClient(),
+		s.cfg.ChainSource,
 		s.cfg.Wallet.Cfg.Database,
 		in.Preimage,
 		in.Key,
