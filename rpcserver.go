@@ -3633,8 +3633,8 @@ func (r *rpcServer) GetPeerIdByScid(
 	edgeInfo, _, _, err := graphDB.FetchChannelEdgesByID(
 		base.ToUint64(),
 	)
-	if err == channeldb.ErrGraphNoEdgesFound ||
-		err == channeldb.ErrEdgeNotFound {
+	if err == graphdb.ErrGraphNoEdgesFound ||
+		err == graphdb.ErrEdgeNotFound {
 		return &lnrpc.GetPeerIdByScidResponse{}, nil
 	}
 	if err != nil {
