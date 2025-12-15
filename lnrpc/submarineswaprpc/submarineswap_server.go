@@ -368,7 +368,7 @@ func (s *Server) UnspentAmount(ctx context.Context,
 		start = int32(creationHeight)
 		lockHeight = int32(lh)
 	}
-	utxos, err := submarineswap.GetUtxos(b.Database(), b.TxStore, s.cfg.ActiveNetParams, start, address)
+	utxos, err := b.GetUtxosFromHeight(s.cfg.ActiveNetParams, start, address)
 	if err != nil {
 		return nil, err
 	}

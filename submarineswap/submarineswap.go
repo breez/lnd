@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/btcsuite/btcwallet/waddrmgr"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/btcsuite/btcwallet/walletdb"
-	"github.com/btcsuite/btcwallet/wtxmgr"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/kvdb"
@@ -458,79 +456,6 @@ func importScript(db walletdb.DB, manager *waddrmgr.Manager, net *chaincfg.Param
 	return p2wshAddr, err
 }
 
-// GetUtxos returns the list of utxos into a specific address from a start height
-func GetUtxos(db walletdb.DB, txstore *wtxmgr.Store, net *chaincfg.Params, start int32, address string) ([]Utxo, error) {
-	var txos []Utxo
-	outPoints := make(map[string]struct{})
-	spentOutPoints := make(map[string]struct{})
-	err := walletdb.View(db, func(dbtx walletdb.ReadTx) error {
-		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
-		rangeFn := func(details []wtxmgr.TxDetails) (bool, error) {
-			// TODO: probably should make RangeTransactions not reuse the
-			// details backing array memory.
-			dets := make([]wtxmgr.TxDetails, len(details))
-			copy(dets, details)
-			details = dets
-
-			//txs := make([]TransactionSummary, 0, len(details))
-			for _, d := range details {
-				//txs = append(txs, makeTxSummary(dbtx, w, &details[i]))
-				if d.Block.Height != -1 {
-					for i, txout := range d.MsgTx.TxOut {
-						_, addrs, _, err := txscript.ExtractPkScriptAddrs(txout.PkScript, net)
-						if err == nil {
-							if len(addrs) == 0 {
-								if len(txout.PkScript) == 0 {
-									log.Errorf("found script with zero addresses and zero length")
-									continue
-								}
-								log.Warnf("found script with zero addresses %v", hex.EncodeToString(txout.PkScript))
-								dis, err := txscript.DisasmString(txout.PkScript)
-								if err != nil {
-									log.Errorf("unable to parse script")
-								} else {
-									log.Infof("parsed script: %v", dis)
-								}
-
-								continue
-							}
-							if addrs[0].String() == address {
-								h := d.MsgTx.TxHash()
-								op := wire.NewOutPoint(&h, uint32(i))
-								txos = append(txos, Utxo{
-									Value:       btcutil.Amount(txout.Value),
-									BlockHeight: d.Block.Height,
-									OutPoint:    *op,
-								})
-								outPoints[op.String()] = struct{}{}
-								//return true, nil
-							}
-						}
-					}
-					for _, txin := range d.MsgTx.TxIn {
-						if _, ok := outPoints[txin.PreviousOutPoint.String()]; ok {
-							spentOutPoints[txin.PreviousOutPoint.String()] = struct{}{}
-						}
-					}
-				}
-			}
-			return false, nil
-		}
-
-		return txstore.RangeTransactions(txmgrNs, start, int32(^uint32(0)>>1), rangeFn)
-	})
-	if err != nil {
-		return nil, err
-	}
-	var utxos []Utxo
-	for _, txo := range txos {
-		if _, ok := spentOutPoints[txo.OutPoint.String()]; !ok {
-			utxos = append(utxos, txo)
-		}
-	}
-	return utxos, nil
-}
-
 func RedeemFees(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwallet.LightningWallet, hash []byte, feePerKw chainfee.SatPerKWeight) (btcutil.Amount, error) {
 	creationHeight, _, _, script, err := getSwapperSubmarineData(c, net.ScriptHashAddrID, hash[:])
 	if err != nil {
@@ -541,7 +466,7 @@ func RedeemFees(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwal
 		return 0, err
 	}
 	w := wallet.WalletController.(*btcwallet.BtcWallet).InternalWallet()
-	utxos, err := GetUtxos(w.Database(), w.TxStore, net, int32(creationHeight), address.String())
+	utxos, err := w.GetUtxosFromHeight(net, int32(creationHeight), address.String())
 	if err != nil {
 		return 0, err
 	}
@@ -577,7 +502,7 @@ func RedeemFees(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwal
 	txOut := wire.TxOut{PkScript: redeemScript}
 	redeemTx.AddTxOut(&txOut)
 
-	_, currentHeight, err := w.ChainClient().GetBestBlock()
+	_, currentHeight, err := wallet.Cfg.ChainIO.GetBestBlock()
 	if err != nil {
 		return 0, err
 	}
@@ -602,7 +527,7 @@ func Redeem(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwallet.
 		return nil, err
 	}
 	w := wallet.WalletController.(*btcwallet.BtcWallet).InternalWallet()
-	utxos, err := GetUtxos(w.Database(), w.TxStore, net, int32(creationHeight), address.String())
+	utxos, err := w.GetUtxosFromHeight(net, int32(creationHeight), address.String())
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +592,7 @@ func RefundTx(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwalle
 	}
 
 	w := wallet.WalletController.(*btcwallet.BtcWallet).InternalWallet()
-	utxos, err := GetUtxos(w.Database(), w.TxStore, net, int32(creationHeight), address.String())
+	utxos, err := w.GetUtxosFromHeight(net, int32(creationHeight), address.String())
 	if err != nil {
 		return nil, 0, err
 	}
