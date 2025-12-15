@@ -554,7 +554,7 @@ func Redeem(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwallet.
 	txOut := wire.TxOut{PkScript: redeemScript}
 	redeemTx.AddTxOut(&txOut)
 
-	_, currentHeight, err := w.ChainClient().GetBestBlock()
+	_, currentHeight, err := wallet.Cfg.ChainIO.GetBestBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -619,7 +619,7 @@ func RefundTx(c *channeldb.ChannelStateDB, net *chaincfg.Params, wallet *lnwalle
 	txOut := wire.TxOut{PkScript: refundScript}
 	refundTx.AddTxOut(&txOut)
 
-	_, currentHeight, err := w.ChainClient().GetBestBlock()
+	_, currentHeight, err := wallet.Cfg.ChainIO.GetBestBlock()
 	if err != nil {
 		return nil, 0, err
 	}
