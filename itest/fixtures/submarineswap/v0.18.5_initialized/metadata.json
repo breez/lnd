@@ -1,0 +1,17 @@
+{
+  "version": "v0.18.5",
+  "state": "initialized",
+  "swap": {
+    "hash": "aab2910610e9d8b919a928f3272f30e77f309cbeb770371417dc1d7bc2923976",
+    "preimage": "1c367b721865f1e640b3ea791eacbdebd3be68e3232efb7e50915ea1cfcd9fe6",
+    "client_pubkey": "0335294615b48f311cafcccfd80be5740834b3c4bb7f50516c25e5362a8dcf0ddd",
+    "swapper_pubkey": "02d1d903702444e88428de64a5f4a85f3247f073af4a9266490bbb20ccc15e78aa",
+    "address": "bcrt1qfu03x8aelzcq2re3qzkjx39jpjemvvsyuyvtnusv8ms9vy27pf8qzmefa2",
+    "lock_height": 288,
+    "amount_sats": 0
+  },
+  "wallet": {
+    "password": "testpassword12345678"
+  },
+  "block_height": 101
+}
