@@ -693,6 +693,8 @@ func newRPCServer(cfg *Config, interceptorChain *rpcperms.InterceptorChain,
 // addDeps populates all dependencies needed by the RPC server, and any
 // of the sub-servers that it maintains. When this is done, the RPC server can
 // be started, and start accepting RPC calls.
+//
+//nolint:funlen
 func (r *rpcServer) addDeps(ctx context.Context, s *server,
 	macService *macaroons.Service,
 	subServerCgs *subRPCServerConfigs, atpl *autopilot.Manager,
@@ -741,6 +743,11 @@ func (r *rpcServer) addDeps(ctx context.Context, s *server,
 			}
 
 			return info.NodeKey1Bytes, info.NodeKey2Bytes, nil
+		},
+		HasNode: func(nodePub route.Vertex) (bool, error) {
+			_, exists, err := graph.HasNode(ctx, nodePub)
+
+			return exists, err
 		},
 		FindRoute:              s.chanRouter.FindRoute,
 		MissionControl:         s.defaultMC,

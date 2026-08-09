@@ -21,6 +21,27 @@ WHERE graph_nodes.last_update IS NULL
     OR EXCLUDED.last_update > graph_nodes.last_update
 RETURNING id;
 
+-- We use a separate upsert for our own node since we want to be less strict
+-- about the last_update field. For our own node, we always want to
+-- update the record even if the last_update is the same as what we have.
+-- name: UpsertSourceNode :one
+INSERT INTO graph_nodes (
+    version, pub_key, alias, last_update, color, signature
+) VALUES (
+    $1, $2, $3, $4, $5, $6
+)
+ON CONFLICT (pub_key, version)
+    -- Update the following fields if a conflict occurs on pub_key
+    -- and version.
+    DO UPDATE SET
+        alias = EXCLUDED.alias,
+        last_update = EXCLUDED.last_update,
+        color = EXCLUDED.color,
+        signature = EXCLUDED.signature
+WHERE graph_nodes.last_update IS NULL
+    OR EXCLUDED.last_update >= graph_nodes.last_update
+RETURNING id;
+
 -- name: GetNodesByIDs :many
 SELECT *
 FROM graph_nodes
@@ -56,7 +77,7 @@ LIMIT $3;
 SELECT EXISTS (
     SELECT 1
     FROM graph_channels c
-    JOIN graph_nodes n ON n.id = c.node_id_1 OR n.id = c.node_id_2
+    JOIN graph_nodes n ON n.id = c.node_id_1
     -- NOTE: we hard-code the version here since the clauses
     -- here that determine if a node is public is specific
     -- to the V1 gossip protocol. In V1, a node is public
@@ -65,6 +86,13 @@ SELECT EXISTS (
     -- announcement. It is enough to just check that we have
     -- one of the signatures since we only ever set them
     -- together.
+    WHERE c.version = 1
+      AND c.bitcoin_1_signature IS NOT NULL
+      AND n.pub_key = $1
+    UNION ALL
+    SELECT 1
+    FROM graph_channels c
+    JOIN graph_nodes n ON n.id = c.node_id_2
     WHERE c.version = 1
       AND c.bitcoin_1_signature IS NOT NULL
       AND n.pub_key = $1

@@ -2129,6 +2129,21 @@ func (s *server) Start(ctx context.Context) error {
 	cleanup := cleaner{}
 
 	s.start.Do(func() {
+		// Before starting any subsystems, repair any link nodes that
+		// may have been incorrectly pruned due to the race condition
+		// that was fixed in the link node pruning logic. This must
+		// happen before the chain arbitrator and other subsystems load
+		// channels, to ensure the invariant "link node exists iff
+		// channels exist" is maintained.
+		err := s.chanStateDB.RepairLinkNodes(s.cfg.ActiveNetParams.Net)
+		if err != nil {
+			srvrLog.Errorf("Failed to repair link nodes: %v", err)
+
+			startErr = err
+
+			return
+		}
+
 		cleanup = cleanup.add(s.customMessageServer.Stop)
 		if err := s.customMessageServer.Start(); err != nil {
 			startErr = err
@@ -2452,9 +2467,8 @@ func (s *server) Start(ctx context.Context) error {
 		// With all the relevant sub-systems started, we'll now attempt
 		// to establish persistent connections to our direct channel
 		// collaborators within the network. Before doing so however,
-		// we'll prune our set of link nodes found within the database
-		// to ensure we don't reconnect to any nodes we no longer have
-		// open channels with.
+		// we'll prune our set of link nodes to ensure we don't
+		// reconnect to any nodes we no longer have open channels with.
 		if err := s.chanStateDB.PruneLinkNodes(); err != nil {
 			srvrLog.Errorf("Failed to prune link nodes: %v", err)
 
@@ -3378,6 +3392,18 @@ func (s *server) genNodeAnnouncement(features *lnwire.RawFeatureVector,
 	for _, modifier := range modifiers {
 		modifier(&newNodeAnn)
 	}
+
+	// The modifiers may have added duplicate addresses, so we need to
+	// de-duplicate them here.
+	uniqueAddrs := map[string]struct{}{}
+	dedupedAddrs := make([]net.Addr, 0)
+	for _, addr := range newNodeAnn.Addresses {
+		if _, ok := uniqueAddrs[addr.String()]; !ok {
+			uniqueAddrs[addr.String()] = struct{}{}
+			dedupedAddrs = append(dedupedAddrs, addr)
+		}
+	}
+	newNodeAnn.Addresses = dedupedAddrs
 
 	// Sign a new update after applying all of the passed modifiers.
 	err := netann.SignNodeAnnouncement(
@@ -5497,6 +5523,20 @@ func (s *server) AttemptRBFCloseUpdate(ctx context.Context,
 	return updates, nil
 }
 
+// calculateNodeAnnouncementTimestamp returns the timestamp to use for a node
+// announcement, ensuring it's at least one second after the previously
+// persisted timestamp. This ensures BOLT-07 compliance, which requires node
+// announcements to have strictly increasing timestamps.
+func calculateNodeAnnouncementTimestamp(persistedTime,
+	currentTime time.Time) time.Time {
+
+	if persistedTime.Unix() >= currentTime.Unix() {
+		return persistedTime.Add(time.Second)
+	}
+
+	return currentTime
+}
+
 // setSelfNode configures and sets the server's self node. It sets the node
 // announcement, signs it, and updates the source node in the graph. When
 // determining values such as color and alias, the method prioritizes values
@@ -5564,9 +5604,9 @@ func (s *server) setSelfNode(ctx context.Context, nodePub route.Vertex,
 		// If we have a source node persisted in the DB already, then we
 		// just need to make sure that the new LastUpdate time is at
 		// least one second after the last update time.
-		if srcNode.LastUpdate.Second() >= nodeLastUpdate.Second() {
-			nodeLastUpdate = srcNode.LastUpdate.Add(time.Second)
-		}
+		nodeLastUpdate = calculateNodeAnnouncementTimestamp(
+			srcNode.LastUpdate, nodeLastUpdate,
+		)
 
 		// If the color is not changed from default, it means that we
 		// didn't specify a different color in the config. We'll use the

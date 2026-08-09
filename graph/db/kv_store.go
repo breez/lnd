@@ -2116,6 +2116,13 @@ func (c *KVStore) fetchNextChanUpdateBatch(
 		batch   []ChannelEdge
 		hasMore bool
 	)
+
+	// Acquire read lock before starting transaction to ensure
+	// consistent lock ordering (cacheMu -> DB) and prevent
+	// deadlock with write operations.
+	c.cacheMu.RLock()
+	defer c.cacheMu.RUnlock()
+
 	err := kvdb.View(c.db, func(tx kvdb.RTx) error {
 		edges := tx.ReadBucket(edgeBucket)
 		if edges == nil {
@@ -2195,9 +2202,7 @@ func (c *KVStore) fetchNextChanUpdateBatch(
 				continue
 			}
 
-			// Before we read the edge info, we'll see if this
-			// element is already in the cache or not.
-			c.cacheMu.RLock()
+			// Check cache (we already hold shared read lock).
 			if channel, ok := c.chanCache.get(chanIDInt); ok {
 				state.edgesSeen[chanIDInt] = struct{}{}
 
@@ -2208,11 +2213,8 @@ func (c *KVStore) fetchNextChanUpdateBatch(
 
 				indexKey, _ = updateCursor.Next()
 
-				c.cacheMu.RUnlock()
-
 				continue
 			}
-			c.cacheMu.RUnlock()
 
 			// The edge wasn't in the cache, so we'll fetch it along
 			// w/ the edge policies and nodes.
@@ -3439,11 +3441,10 @@ func (c *KVStore) fetchLightningNode(tx kvdb.RTx,
 	return node, nil
 }
 
-// HasLightningNode determines if the graph has a vertex identified by the
-// target node identity public key. If the node exists in the database, a
-// timestamp of when the data for the node was lasted updated is returned along
-// with a true boolean. Otherwise, an empty time.Time is returned with a false
-// boolean.
+// HasNode determines if the graph has a vertex identified by the target node
+// identity public key. If the node exists in the database, a timestamp of when
+// the data for the node was lasted updated is returned along with a true
+// boolean. Otherwise, an empty time.Time is returned with a false boolean.
 func (c *KVStore) HasNode(_ context.Context,
 	nodePub [33]byte) (time.Time, bool, error) {
 
