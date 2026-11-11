@@ -209,6 +209,8 @@ replace github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 // allows us to specify that as an option.
 replace google.golang.org/protobuf => github.com/lightninglabs/protobuf-go-hex-display v1.36.11-hex-display
 
+replace github.com/btcsuite/btcwallet => github.com/breez/btcwallet v0.16.10-0.20261111191655-f076dae79f83
+
 // If you change this please also update docs/INSTALL.md and all other go.mod
 // files. The release build toolchain version is tracked separately by
 // GO_VERSION in Makefile.
